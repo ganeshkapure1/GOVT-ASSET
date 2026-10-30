@@ -1,0 +1,355 @@
+// ==============================================================================
+// GovAsset — Prisma Schema for Supabase Managed PostgreSQL + PostGIS
+// ==============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------------------------
+
+enum JurisdictionLevel {
+  STATE
+  DISTRICT_CORP
+  ZONE
+  WARD
+
+  @@map("jurisdiction_level")
+}
+
+enum UserRole {
+  CITIZEN
+  OFFICER
+  SUPERVISOR
+  FIELD_WORKER
+  DEPT_ADMIN
+  PLATFORM_ADMIN
+
+  @@map("user_role")
+}
+
+enum ComplaintPriority {
+  P1_CRITICAL
+  P2_HIGH
+  P3_MEDIUM
+  P4_LOW
+
+  @@map("complaint_priority")
+}
+
+enum ComplaintStatus {
+  SUBMITTED
+  TRIAGED_VALIDATED
+  ASSIGNED
+  IN_PROGRESS
+  WORK_COMPLETED
+  VERIFIED_RESOLVED
+  CLOSED
+  REJECTED_INVALID
+  DUPLICATE_LINKED
+  DISPUTED_REOPENED
+
+  @@map("complaint_status")
+}
+
+enum EvidenceStage {
+  BEFORE_SUBMISSION
+  AFTER_REPAIR
+  SUPERVISOR_INSPECTION
+  DISPUTE_PROOF
+
+  @@map("evidence_stage")
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  IN_APP
+
+  @@map("notification_channel")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+
+  @@map("notification_status")
+}
+
+// ------------------------------------------------------------------------------
+// 1. JURISDICTIONS (Hierarchical: Corp -> Zones -> Wards with PostGIS Geometries)
+// ------------------------------------------------------------------------------
+
+model Jurisdiction {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String            @db.VarChar(100)
+  code      String            @unique @db.VarChar(30)
+  level     JurisdictionLevel
+  parentId  String?           @map("parent_id") @db.Uuid
+  parent    Jurisdiction?     @relation("JurisdictionHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Jurisdiction[]    @relation("JurisdictionHierarchy")
+
+  // Multi-corporation & geographic metadata
+  state         String?           @db.VarChar(100)
+  district      String?           @db.VarChar(100)
+  city          String?           @db.VarChar(100)
+  contactEmail  String?           @map("contact_email") @db.VarChar(255)
+  contactPhone  String?           @map("contact_phone") @db.VarChar(20)
+  logoUrl       String?           @map("logo_url") @db.VarChar(500)
+  isActive      Boolean           @default(true) @map("is_active")
+  metadata      Json?
+
+  // PostGIS boundary polygon stored in EPSG:4326
+  boundary  Unsupported("geometry(MultiPolygon, 4326)")?
+
+  users       User[]
+  complaints  Complaint[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([parentId], map: "idx_jurisdictions_parent")
+  @@map("jurisdictions")
+}
+
+// ------------------------------------------------------------------------------
+// 2. DEPARTMENTS (PWD, Electrical, Water/Sewerage, Solid Waste, Parks)
+// ------------------------------------------------------------------------------
+
+model Department {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String  @unique @db.VarChar(50)
+  name         String  @db.VarChar(100)
+  description  String? @db.Text
+  contactEmail String? @map("contact_email") @db.VarChar(255)
+  contactPhone String? @map("contact_phone") @db.VarChar(20)
+  isActive     Boolean @default(true) @map("is_active")
+
+  users       User[]
+  categories  ComplaintCategory[]
+  complaints  Complaint[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("departments")
+}
+
+// ------------------------------------------------------------------------------
+// 3. USERS & RBAC (Citizens, Triage Officers, Supervisors, Field Workers, Admins)
+// ------------------------------------------------------------------------------
+
+model User {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phoneNumber    String    @unique @map("phone_number") @db.VarChar(15)
+  email          String?   @unique @db.VarChar(255)
+  fullName       String    @map("full_name") @db.VarChar(150)
+  passwordHash   String?   @map("password_hash") @db.VarChar(255)
+  role           UserRole  @default(CITIZEN)
+  departmentId   String?   @map("department_id") @db.Uuid
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  jurisdictionId String?   @map("jurisdiction_id") @db.Uuid
+  jurisdiction   Jurisdiction? @relation(fields: [jurisdictionId], references: [id], onDelete: SetNull)
+  
+  // Field worker & staff profile details
+  staffCode      String?   @map("staff_code") @db.VarChar(50)
+  designation    String?   @db.VarChar(100)
+  skills         String?   @db.VarChar(255)
+
+  isActive       Boolean   @default(true) @map("is_active")
+  lastLoginAt    DateTime? @map("last_login_at") @db.Timestamptz
+
+  complaintsFiled      Complaint[]           @relation("CitizenComplaints")
+  assignedWorkOrders   ComplaintAssignment[] @relation("AssignedWorker")
+  createdAssignments  ComplaintAssignment[] @relation("AssignmentCreator")
+  uploadedEvidence     ComplaintEvidence[]   @relation("EvidenceUploader")
+  timelineActions      ComplaintTimeline[]   @relation("TimelineActor")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([role, jurisdictionId, departmentId], map: "idx_users_role_jurisdiction")
+  @@map("users")
+}
+
+// ------------------------------------------------------------------------------
+// 4. CATEGORIES & SLA POLICIES
+// ------------------------------------------------------------------------------
+
+model ComplaintCategory {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String            @unique @db.VarChar(50)
+  nameEn          String            @map("name_en") @db.VarChar(100)
+  nameHi          String            @map("name_hi") @db.VarChar(100)
+  departmentId    String            @map("department_id") @db.Uuid
+  department      Department        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  defaultPriority ComplaintPriority @default(P3_MEDIUM) @map("default_priority")
+  isActive        Boolean           @default(true) @map("is_active")
+
+  slaPolicies SlaPolicy[]
+  complaints  Complaint[]
+
+  @@map("complaint_categories")
+}
+
+model SlaPolicy {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId         String            @map("category_id") @db.Uuid
+  category           ComplaintCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priority           ComplaintPriority
+  responseSlaHours   Int               @map("response_sla_hours")
+  resolutionSlaHours Int               @map("resolution_sla_hours")
+  escalationHours    Int               @map("escalation_hours")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([categoryId, priority], map: "uq_category_priority")
+  @@map("sla_policies")
+}
+
+// ------------------------------------------------------------------------------
+// 5. COMPLAINTS (FSM Core Entity with PostGIS Geotags & SLA Timers)
+// ------------------------------------------------------------------------------
+
+model Complaint {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referenceNumber    String            @unique @map("reference_number") @db.VarChar(25)
+  citizenId          String?           @map("citizen_id") @db.Uuid
+  citizen            User?             @relation("CitizenComplaints", fields: [citizenId], references: [id], onDelete: SetNull)
+  citizenPhone       String            @map("citizen_phone") @db.VarChar(15)
+  title              String            @db.VarChar(200)
+  description        String            @db.Text
+  categoryId         String            @map("category_id") @db.Uuid
+  category           ComplaintCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  departmentId       String            @map("department_id") @db.Uuid
+  department         Department        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jurisdictionId     String            @map("jurisdiction_id") @db.Uuid
+  jurisdiction       Jurisdiction      @relation(fields: [jurisdictionId], references: [id], onDelete: Restrict)
+
+  // PostGIS Point coordinates (EPSG:4326)
+  locationCoords     Unsupported("geometry(Point, 4326)") @map("location_coords")
+  landmarkAddress    String            @map("landmark_address") @db.Text
+
+  status             ComplaintStatus   @default(SUBMITTED)
+  priority           ComplaintPriority @default(P3_MEDIUM)
+
+  parentComplaintId  String?           @map("parent_complaint_id") @db.Uuid
+  parentComplaint    Complaint?        @relation("DuplicateLinkage", fields: [parentComplaintId], references: [id], onDelete: SetNull)
+  duplicateChildren  Complaint[]       @relation("DuplicateLinkage")
+
+  rejectionReason    String?           @map("rejection_reason") @db.Text
+  responseDueAt      DateTime          @map("response_due_at") @db.Timestamptz
+  resolutionDueAt    DateTime          @map("resolution_due_at") @db.Timestamptz
+  slaBreached        Boolean           @default(false) @map("sla_breached")
+  disputeCount       Int               @default(0) @map("dispute_count")
+  version            Int               @default(1)
+
+  evidence     ComplaintEvidence[]
+  assignments  ComplaintAssignment[]
+  timeline     ComplaintTimeline[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([status, jurisdictionId, departmentId], map: "idx_complaints_status_jurisdiction")
+  @@map("complaints")
+}
+
+// ------------------------------------------------------------------------------
+// 6. COMPLAINT EVIDENCE (Photo Proof with Geolocation Stamp & Proximity Audit)
+// ------------------------------------------------------------------------------
+
+model ComplaintEvidence {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  complaintId         String         @map("complaint_id") @db.Uuid
+  complaint           Complaint      @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  stage               EvidenceStage
+  fileKey             String         @map("file_key") @db.VarChar(500)
+  mimeType            String         @map("mime_type") @db.VarChar(50)
+  fileSizeBytes       Int            @map("file_size_bytes")
+  uploadedById        String         @map("uploaded_by") @db.Uuid
+  uploadedBy          User           @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  captureCoords       Unsupported("geometry(Point, 4326)")? @map("capture_coords")
+  isVerifiedProximity Boolean        @default(false) @map("is_verified_proximity")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([complaintId], map: "idx_evidence_complaint")
+  @@map("complaint_evidence")
+}
+
+// ------------------------------------------------------------------------------
+// 7. COMPLAINT ASSIGNMENTS (Work Orders to Field Staff)
+// ------------------------------------------------------------------------------
+
+model ComplaintAssignment {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  complaintId        String    @map("complaint_id") @db.Uuid
+  complaint          Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  assignedWorkerId   String    @map("assigned_worker_id") @db.Uuid
+  assignedWorker     User      @relation("AssignedWorker", fields: [assignedWorkerId], references: [id], onDelete: Restrict)
+  assignedById       String    @map("assigned_by_id") @db.Uuid
+  assignedBy         User      @relation("AssignmentCreator", fields: [assignedById], references: [id], onDelete: Restrict)
+  targetCompletionAt DateTime  @map("target_completion_at") @db.Timestamptz
+  workerNotes        String?   @map("worker_notes") @db.Text
+  isActive           Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([assignedWorkerId, isActive], map: "idx_assignments_worker")
+  @@map("complaint_assignments")
+}
+
+// ------------------------------------------------------------------------------
+// 8. COMPLAINT TIMELINE (Deterministic Audit Trail)
+// ------------------------------------------------------------------------------
+
+model ComplaintTimeline {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  complaintId  String           @map("complaint_id") @db.Uuid
+  complaint    Complaint        @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actorId      String?          @map("actor_id") @db.Uuid
+  actor        User?            @relation("TimelineActor", fields: [actorId], references: [id], onDelete: SetNull)
+  fromStatus   ComplaintStatus? @map("from_status")
+  toStatus     ComplaintStatus  @map("to_status")
+  publicNote   String?          @map("public_note") @db.Text
+  internalNote String?          @map("internal_note") @db.Text
+  metadata     Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([complaintId, createdAt], map: "idx_timeline_complaint")
+  @@map("complaint_timeline")
+}
+
+// ------------------------------------------------------------------------------
+// 9. NOTIFICATIONS (Delivery Audit Log)
+// ------------------------------------------------------------------------------
+
+model Notification {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientPhone String?             @map("recipient_phone") @db.VarChar(15)
+  recipientEmail String?             @map("recipient_email") @db.VarChar(255)
+  channel        NotificationChannel
+  templateCode   String              @map("template_code") @db.VarChar(50)
+  payload        Json
+  status         NotificationStatus  @default(PENDING)
+  retryCount     Int                 @default(0) @map("retry_count")
+  errorMessage   String?             @map("error_message") @db.Text
+  sentAt         DateTime?           @map("sent_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([status, retryCount], map: "idx_notifications_status")
+  @@map("notifications")
+}
