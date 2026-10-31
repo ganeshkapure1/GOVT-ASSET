@@ -36,10 +36,14 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     try {
+      if (typeof document !== 'undefined') {
+        document.cookie = 'govasset_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+      }
       await fetch('/api/v1/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore
     } finally {
-      router.push('/login');
-      router.refresh();
+      window.location.href = '/login';
     }
   };
 
@@ -83,6 +87,7 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
     navItems = [
       { label: 'Executive Dashboard', href: '/ops/triage', icon: ClipboardCheckIcon },
       { label: 'Complaints Queue', href: '/ops/complaints', icon: FileTextIcon },
+      { label: 'Verifications', href: '/ops/verifications', icon: ShieldCheckIcon, badge: 'Review' },
       { label: 'Manage Workers', href: '/ops/crew', icon: UserCheckIcon },
       { label: 'Live Monitoring', href: '/ops/assigned', icon: ClipboardCheckIcon },
       { label: 'Reports & SLAs', href: '/ops/reports', icon: FileTextIcon },
@@ -135,7 +140,7 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
                 GovAsset
               </span>
               <span className="text-[10px] font-bold text-[#0B4FC2] dark:text-blue-400 tracking-wider uppercase block truncate">
-                {corporation ? corporation.code : 'GIS Operations'}
+                National Command Console (Pan-India)
               </span>
             </div>
           </Link>
@@ -194,12 +199,14 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
                   {user?.fullName || (isLoading ? 'Loading profile...' : 'Staff Officer')}
                 </p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                  {user?.designation ||
-                    (corporation?.city
-                      ? `${corporation.city} Officer`
-                      : user?.role
-                      ? `${user.role} Officer`
-                      : 'Operations Staff')}
+                  {user?.role === 'OFFICER'
+                    ? 'Municipal Operations Officer • Pan-India Console'
+                    : user?.designation ||
+                      (corporation?.city
+                        ? `${corporation.city} Officer`
+                        : user?.role
+                        ? `${user.role} Officer`
+                        : 'Operations Staff')}
                 </p>
               </div>
             </div>
@@ -228,20 +235,16 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
               <MenuIcon className="w-6 h-6" />
             </button>
 
-            {/* Breadcrumb Title & Corporation Context Badge */}
+            {/* Breadcrumb Title & Pan-India Context Badge */}
             <div className="hidden sm:flex items-center gap-2 min-w-0">
               <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Overview
               </span>
               <span
                 data-testid="officer-location-badge"
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold border truncate ${
-                  corporation
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0B4FC2] dark:text-blue-300 border-blue-200/80 dark:border-blue-900/60'
-                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                }`}
+                className="px-2.5 py-1 rounded-md text-[11px] font-bold border truncate bg-blue-50 dark:bg-blue-950/60 text-[#0B4FC2] dark:text-blue-300 border-blue-200/80 dark:border-blue-900/60"
               >
-                {locationLabel}
+                Pan-India Operations Console
               </span>
             </div>
 
@@ -265,8 +268,8 @@ function GovOpsLayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* Dynamic Corporation / City Badge */}
             <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200">
-              <span className={`w-2 h-2 rounded-full ${corporation ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className="truncate max-w-[200px]">{locationLabel}</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="truncate max-w-[240px]">National Civic Network • Pan-India</span>
             </div>
 
             {/* Notification Bell */}

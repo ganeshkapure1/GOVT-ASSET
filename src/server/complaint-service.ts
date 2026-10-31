@@ -56,6 +56,12 @@ export function isUuid(value: unknown): boolean {
 }
 
 /**
+ * Standard transaction options for Supabase Transaction Pooler across remote latency.
+ * Overrides default 5000ms timeout to 60000ms to prevent premature transaction closures.
+ */
+const TX_OPTIONS = { maxWait: 20000, timeout: 60000 };
+
+/**
  * Maps incoming UI category identifiers, codes, slugs, or UUIDs to database category records.
  *
  * Invariants:
@@ -190,17 +196,20 @@ export async function resolveJurisdiction(
     }
   }
 
-  // 2. Direct Local Body Code check (e.g. CSMC-01, PMC-01, BBMP, MCD)
+  // 2. Direct Local Body Code check (e.g. CSMC-01, CSMC, PMC-01, BBMP, MCD)
   if (localBodyCode && typeof localBodyCode === 'string' && localBodyCode.trim()) {
     const cleanCode = localBodyCode.trim();
     const existingBody = await db.jurisdiction.findFirst({
       where: {
         OR: [
           { code: { equals: cleanCode, mode: 'insensitive' } },
+          { code: { equals: `${cleanCode}-01`, mode: 'insensitive' } },
+          { code: { startsWith: cleanCode, mode: 'insensitive' } },
           { name: { equals: cleanCode, mode: 'insensitive' } },
         ],
         isActive: true,
       },
+      orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
     if (existingBody) return existingBody.id;
@@ -225,6 +234,7 @@ export async function resolveJurisdiction(
       } catch {
         const fallback = await db.jurisdiction.findFirst({
           where: { code: def.shortCode },
+          orderBy: { createdAt: 'asc' },
           select: { id: true },
         });
         if (fallback) return fallback.id;
@@ -241,6 +251,7 @@ export async function resolveJurisdiction(
         level: 'DISTRICT_CORP',
         isActive: true,
       },
+      orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
     if (corpByCity) return corpByCity.id;
@@ -635,7 +646,7 @@ export async function createComplaint(input: CreateComplaintInput) {
       jurisdictionId,
       departmentId,
     };
-  });
+  }, TX_OPTIONS);
 }
 
 // =============================================================================
@@ -922,7 +933,7 @@ export async function triageComplaint(input: TriageInput) {
       });
 
       return updated;
-    });
+    }, TX_OPTIONS);
   }
 
   // Action is VALIDATE
@@ -942,7 +953,7 @@ export async function triageComplaint(input: TriageInput) {
     });
 
     return updated;
-  });
+  }, TX_OPTIONS);
 }
 
 // =============================================================================
@@ -1160,7 +1171,7 @@ export async function assignComplaint(input: AssignInput) {
     });
 
     return { complaint: updated, assignment };
-  });
+  }, TX_OPTIONS);
 }
 
 // =============================================================================
@@ -1268,7 +1279,7 @@ export async function updateFieldTask(input: FieldUpdateInput) {
       });
 
       return updated;
-    });
+    }, TX_OPTIONS);
   }
 
   // Action is COMPLETE_WORK
@@ -1357,7 +1368,7 @@ export async function updateFieldTask(input: FieldUpdateInput) {
       ...updated,
       proximity: proximityResult,
     };
-  });
+  }, TX_OPTIONS);
 }
 
 // =============================================================================
@@ -1376,9 +1387,9 @@ export interface VerifyInput {
 export async function verifyComplaint(input: VerifyInput) {
   const { complaintId, supervisorSession, action, rejectionReason, notes, expectedVersion } = input;
 
-  const allowedRoles = ['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'];
+  const allowedRoles = ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'];
   if (!allowedRoles.includes(supervisorSession.role)) {
-    throw new WorkflowError('FORBIDDEN', 403, 'Supervisor or Administrative privileges required.');
+    throw new WorkflowError('FORBIDDEN', 403, 'Officer, Supervisor or Administrative privileges required.');
   }
 
   const complaint = await db.complaint.findUnique({
@@ -1443,7 +1454,7 @@ export async function verifyComplaint(input: VerifyInput) {
       });
 
       return updated;
-    });
+    }, TX_OPTIONS);
   }
 
   // Action is REJECT (Return for Rework)
@@ -1488,7 +1499,7 @@ export async function verifyComplaint(input: VerifyInput) {
     }
 
     return updated;
-  });
+  }, TX_OPTIONS);
 }
 
 // =============================================================================
@@ -1651,7 +1662,7 @@ export async function disputeComplaint(input: DisputeInput) {
     });
 
     return updated;
-  });
+  }, TX_OPTIONS);
 }
 
 export interface FeedbackInput {

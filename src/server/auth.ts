@@ -89,6 +89,14 @@ export function verifyCsrfProtection(request?: Request | null): boolean {
     try {
       const originUrl = new URL(origin);
       if (originUrl.host !== host) {
+        // In local development or proxy setups, permit localhost/127.0.0.1 on different ports
+        const originHostname = originUrl.hostname;
+        const hostHostname = host.split(':')[0];
+        const isLocalOrigin = originHostname === 'localhost' || originHostname === '127.0.0.1';
+        const isLocalHost = hostHostname === 'localhost' || hostHostname === '127.0.0.1';
+        if (isLocalOrigin && isLocalHost) {
+          return true;
+        }
         return false;
       }
     } catch {
@@ -197,7 +205,17 @@ export async function canAccessCorporation(
   if (session.role === 'PLATFORM_ADMIN') return true;
   if (!session.jurisdictionId) return false;
   const userCorpId = await getCorporationIdForJurisdiction(session.jurisdictionId);
-  return userCorpId === targetCorporationId;
+  if (userCorpId === targetCorporationId) return true;
+  if (userCorpId) {
+    const [c1, c2] = await Promise.all([
+      db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }),
+      db.jurisdiction.findUnique({ where: { id: targetCorporationId }, select: { city: true, name: true } }),
+    ]);
+    if (c1 && c2 && ((c1.city && c2.city && c1.city.toLowerCase() === c2.city.toLowerCase()) || c1.name.toLowerCase() === c2.name.toLowerCase())) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -210,8 +228,8 @@ export async function canAccessJurisdiction(
 ): Promise<boolean> {
   if (!targetJurisdictionId) return false;
 
-  // Platform admins oversee all jurisdictions
-  if (session.role === 'PLATFORM_ADMIN') {
+  // Platform admins and Officers oversee all jurisdictions pan-India
+  if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER') {
     return true;
   }
 
@@ -242,6 +260,13 @@ export async function canAccessJurisdiction(
       const userCorpId = await getCorporationIdForJurisdiction(session.jurisdictionId);
       const targetCorpId = await getCorporationIdForJurisdiction(targetJurisdictionId);
       if (userCorpId && targetCorpId && userCorpId !== targetCorpId) {
+        const [c1, c2] = await Promise.all([
+          db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }),
+          db.jurisdiction.findUnique({ where: { id: targetCorpId }, select: { city: true, name: true } }),
+        ]);
+        if (c1 && c2 && ((c1.city && c2.city && c1.city.toLowerCase() === c2.city.toLowerCase()) || c1.name.toLowerCase() === c2.name.toLowerCase())) {
+          return true;
+        }
         return false; // Cross-corporation access strictly denied
       }
 
@@ -274,8 +299,8 @@ export function canAccessComplaint(
   },
   resolvedCorpId?: string | null
 ): boolean {
-  // Platform admins have platform-wide oversight
-  if (session.role === 'PLATFORM_ADMIN') {
+  // Platform admins and Officers have platform-wide oversight to triage, assign, and verify complaints
+  if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER') {
     return true;
   }
 

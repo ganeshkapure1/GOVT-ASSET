@@ -27,41 +27,14 @@ export default function OpsVerificationsPage() {
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [verifications, setVerifications] = useState<VerificationItem[]>([
-    {
-      id: '77777777-7777-7777-7777-777777770001',
-      ref: 'GOV-2026-00482',
-      title: 'Deep Pothole Filled and Compacted',
-      category: 'Damaged Roads & Potholes',
-      landmark: 'Mayur Colony, Opp. Krishna Hospital, Ward 28',
-      completedBy: 'Vikram Singh (Road Maintenance Crew #4)',
-      completedAt: 'Today, 1:45 PM',
-      gpsDistance: '14 meters from complaint origin (PASS)',
-      beforeDesc: 'Deep 45cm asphalt cavity with exposed aggregate base. P1 Priority.',
-      afterDesc: 'Cold mix bitumen laid, leveled, and roller-compacted to road surface gradient.',
-      coords: '18.5089° N, 73.8112° E',
-    },
-    {
-      id: '77777777-7777-7777-7777-777777770002',
-      ref: 'GOV-2026-00474',
-      title: 'Damaged Water Valve Replaced',
-      category: 'Water Leakage & Sewage',
-      landmark: 'Dahanukar Colony Lane 4, Ward 28',
-      completedBy: 'Suresh Jadhav (Water Distribution Team B)',
-      completedAt: 'Today, 11:20 AM',
-      gpsDistance: '8 meters from complaint origin (PASS)',
-      beforeDesc: 'Cracked cast-iron sluice valve leaking approximately 15 liters/min into roadway.',
-      afterDesc: 'New 150mm ductile iron valve fitted with flange gaskets and tested under 4 bar pressure.',
-      coords: '18.5012° N, 73.8190° E',
-    },
-  ]);
+  const [verifications, setVerifications] = useState<VerificationItem[]>([]);
 
   const loadVerifications = async () => {
     try {
       const res = await fetch('/api/v1/ops/verifications');
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           const mapped = json.data.map((c: any) => ({
             id: c.id,
             ref: c.ref,
@@ -73,7 +46,7 @@ export default function OpsVerificationsPage() {
             gpsDistance: 'Verified on-site coordinates (PASS)',
             beforeDesc: 'Intake photo and citizen grievance description recorded.',
             afterDesc: c.workerNotes || 'Repairs completed and photographed by field team.',
-            coords: '18.5089° N, 73.8112° E',
+            coords: '19.8872° N, 75.3433° E',
           }));
           setVerifications(mapped);
         }
@@ -173,7 +146,18 @@ export default function OpsVerificationsPage() {
 
       {/* Verification Cards */}
       <div className="space-y-6">
-        {verifications.map((item) => (
+        {verifications.length === 0 ? (
+          <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-civic-200 dark:border-slate-800">
+            <CheckCircleIcon className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              No Work Orders Awaiting Verification
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              All completed field repair tasks have been inspected and verified.
+            </p>
+          </div>
+        ) : (
+          verifications.map((item) => (
           <div
             key={item.ref}
             className="bg-white dark:bg-slate-900 border border-civic-200/90 dark:border-slate-800 rounded-2xl p-6 shadow-subtle space-y-5 transition-all"
@@ -237,7 +221,8 @@ export default function OpsVerificationsPage() {
               </div>
             </div>
           </div>
-        ))}
+        ))
+      )}
       </div>
 
       {/* Dedicated Rework Modal */}

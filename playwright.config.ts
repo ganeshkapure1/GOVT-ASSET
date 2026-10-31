@@ -36,7 +36,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3005',
+    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3001',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     channel: 'chrome',
@@ -51,10 +51,10 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'node -e "process.env.PORT=3005; require(\'./.next/standalone/server.js\')"',
-    url: 'http://localhost:3005',
-    reuseExistingServer: false,
+  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL ? undefined : {
+    command: 'npm run start',
+    url: 'http://localhost:3001',
+    reuseExistingServer: true,
     timeout: 120000,
   },
 });

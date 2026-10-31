@@ -35,9 +35,30 @@ export async function GET(request: NextRequest) {
       }
 
       if (corporationId) {
+        const corpRecord = await db.jurisdiction.findUnique({
+          where: { id: corporationId },
+          select: { name: true, city: true },
+        });
+
+        const siblingCorps = corpRecord
+          ? await db.jurisdiction.findMany({
+              where: {
+                level: 'DISTRICT_CORP',
+                OR: [
+                  { id: corporationId },
+                  ...(corpRecord.city ? [{ city: corpRecord.city }] : []),
+                  { name: { equals: corpRecord.name, mode: 'insensitive' } },
+                ],
+              },
+              select: { id: true },
+            })
+          : [];
+
+        const allCorpIds = Array.from(new Set([corporationId, ...siblingCorps.map((c) => c.id)]));
+
         // Find all constituent zone IDs for this corporation
         const zones = await db.jurisdiction.findMany({
-          where: { parentId: corporationId, level: 'ZONE' },
+          where: { parentId: { in: allCorpIds }, level: 'ZONE' },
           select: { id: true },
         });
         const zoneIds = zones.map((z) => z.id);
@@ -47,13 +68,13 @@ export async function GET(request: NextRequest) {
           where: {
             OR: [
               { parentId: { in: zoneIds } },
-              { parentId: corporationId },
+              { parentId: { in: allCorpIds } },
             ],
           },
           select: { id: true },
         });
         corpJurisdictionIds = [
-          corporationId,
+          ...allCorpIds,
           ...zoneIds,
           ...childJurs.map((w) => w.id),
         ];
@@ -64,10 +85,28 @@ export async function GET(request: NextRequest) {
     const whereConditions: any = {};
 
     // Jurisdiction filtering
-    if (session.role === 'PLATFORM_ADMIN') {
+    if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER' || wardParam === 'all' || !wardParam) {
       if (wardParam && wardParam !== 'all') {
-        whereConditions.jurisdictionId = wardParam;
+        const selectedJur = await db.jurisdiction.findUnique({
+          where: { id: wardParam },
+          select: { id: true, level: true },
+        });
+        if (selectedJur && (selectedJur.level === 'DISTRICT_CORP' || selectedJur.level === 'CITY' || selectedJur.level === 'STATE')) {
+          const childWards = await db.jurisdiction.findMany({
+            where: {
+              OR: [
+                { id: wardParam },
+                { parentId: wardParam },
+              ],
+            },
+            select: { id: true },
+          });
+          whereConditions.jurisdictionId = { in: childWards.map((c) => c.id) };
+        } else {
+          whereConditions.jurisdictionId = wardParam;
+        }
       }
+      // If wardParam is 'all' or empty, do not restrict whereConditions.jurisdictionId (Pan-India)!
     } else {
       if (wardParam && wardParam !== 'all') {
         // Enforce corporation boundary if specific jurisdiction is requested
@@ -96,14 +135,8 @@ export async function GET(request: NextRequest) {
     // Department filtering
     if (deptParam && deptParam !== 'all') {
       whereConditions.departmentId = deptParam;
-    } else if (deptParam === 'all') {
-      // Do not filter by department
-    } else if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN' || session.role === 'SUPERVISOR') {
-      // Default to user's department if assigned
-      if (session.departmentId) {
-        whereConditions.departmentId = session.departmentId;
-      }
     }
+    // Default: show complaints across all civic categories (do not lock to single department)
 
     // Status filtering
     if (statusParam && statusParam !== 'all') {
@@ -159,7 +192,7 @@ export async function GET(request: NextRequest) {
     const metricsBaseWhere: any = {};
     if (whereConditions.jurisdictionId) {
       metricsBaseWhere.jurisdictionId = whereConditions.jurisdictionId;
-    } else if (corpJurisdictionIds.length > 0) {
+    } else if (session.role !== 'OFFICER' && session.role !== 'PLATFORM_ADMIN' && corpJurisdictionIds.length > 0) {
       metricsBaseWhere.jurisdictionId = { in: corpJurisdictionIds };
     }
     if (whereConditions.departmentId) {

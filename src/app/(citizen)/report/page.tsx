@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -108,7 +109,7 @@ function ReportIssueContent() {
     let isMounted = true;
     fetch('/api/v1/auth/me')
       .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
+      .then(async (json) => {
         if (!isMounted) return;
         setIsCheckingAuth(false);
         if (json?.success && json?.user && json.user.role === 'CITIZEN') {
@@ -118,6 +119,17 @@ function ReportIssueContent() {
             phoneNumber: json.user.phoneNumber,
           });
           setPhone(json.user.phoneNumber);
+        } else {
+          // If the visitor has an old staff session (e.g. Sachin / OFFICER), purge it on citizen routes
+          if (json?.user && json.user.role !== 'CITIZEN') {
+            try {
+              if (typeof document !== 'undefined') {
+                document.cookie = 'govasset_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+              }
+              await fetch('/api/v1/auth/logout', { method: 'POST' });
+            } catch {}
+          }
+          setAuthCitizen(null);
         }
       })
       .catch(() => {
@@ -599,13 +611,13 @@ function ReportIssueContent() {
             <span className="hidden sm:inline">Location &amp; Category</span>
             <span className="sm:hidden">Location</span>
           </div>
-          <div className="h-0.5 w-6 sm:w-10 bg-slate-200 dark:bg-slate-800" />
+          <div className="h-0.5 w-6 sm:w-10 bg-slate-200 dark:border-slate-800" />
           <div className={`flex items-center gap-2 ${step >= 2 ? 'text-brand-blue dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500'}`}>
             <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${step >= 2 ? 'bg-brand-blue dark:bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>2</span>
             <span className="hidden sm:inline">Evidence &amp; Details</span>
             <span className="sm:hidden">Details</span>
           </div>
-          <div className="h-0.5 w-6 sm:w-10 bg-slate-200 dark:bg-slate-800" />
+          <div className="h-0.5 w-6 sm:w-10 bg-slate-200 dark:border-slate-800" />
           <div className={`flex items-center gap-2 ${step >= 3 ? 'text-brand-blue dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500'}`}>
             <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${step >= 3 ? 'bg-brand-blue dark:bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>3</span>
             <span className="hidden sm:inline">Verify &amp; Submit</span>
@@ -613,6 +625,29 @@ function ReportIssueContent() {
           </div>
         </div>
       </div>
+
+      {/* Citizen Verification Gate Banner */}
+      {!isCheckingAuth && !authCitizen && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheckIcon className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-900 dark:text-amber-100 text-xs sm:text-sm">
+                Citizen Sign-In Required Before Registering Grievance
+              </p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                You must be authenticated with a verified mobile number to submit official complaints. Anonymous or staff submissions are not permitted.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/login?redirect=/report"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0B4FC2] hover:bg-blue-800 text-white text-xs font-bold shrink-0 shadow-2xs"
+          >
+            Sign In with Mobile OTP &rarr;
+          </Link>
+        </div>
+      )}
 
       {/* Form Container */}
       <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs backdrop-blur-sm space-y-6 transition-colors">

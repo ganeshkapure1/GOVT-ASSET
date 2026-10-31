@@ -183,7 +183,7 @@ export function CivicHeroGraphic({ className = 'w-full h-auto' }: { className?: 
             Work Order Completed
           </text>
           <text x="56" y="48" fill="#475569" fontSize="10" fontFamily="sans-serif">
-            Streetlight Replaced • Ward 04
+            Streetlight Replaced • Field Verified
           </text>
           <rect x="56" y="55" width="76" height="14" rx="4" fill="#DCFCE7" />
           <text x="61" y="65" fill="#15803D" fontSize="8.5" fontWeight="700" fontFamily="sans-serif">

@@ -255,11 +255,13 @@ function LoginContent() {
   const devAccounts = [
     { label: 'Citizen (CSMC)', portal: 'CITIZEN' as const, phone: '+919822010108' },
     { label: 'Citizen (PMC)', portal: 'CITIZEN' as const, phone: '+919822010008' },
-    { label: 'CSMC Officer', portal: 'OFFICIAL' as const, email: 'officer.csmc@govasset.in' },
+    { label: 'CSMC Officer (Sachin)', portal: 'OFFICIAL' as const, email: 'officer.csmc@govasset.in' },
+    { label: 'Pune Officer (Sunita)', portal: 'OFFICIAL' as const, email: 'officer.kothrud@govasset.in' },
+    { label: 'Ward 12 Officer (Amit)', portal: 'OFFICIAL' as const, email: 'officer.shivaji@govasset.in' },
     { label: 'CSMC Supervisor', portal: 'OFFICIAL' as const, email: 'supervisor.csmc@govasset.in' },
     { label: 'Platform Admin', portal: 'OFFICIAL' as const, email: 'admin@govasset.in' },
-    { label: 'CSMC Crew #1 (Ganesh)', portal: 'WORKER' as const, identifier: 'field.csmc@govasset.in' },
-    { label: 'CSMC Crew #2 (Santosh)', portal: 'WORKER' as const, identifier: 'field2.csmc@govasset.in' },
+    { label: 'Worker: Ganesh (Road Lead)', portal: 'WORKER' as const, identifier: 'field.csmc@govasset.in' },
+    { label: 'Worker: Ramesh Kale (Pipelines)', portal: 'WORKER' as const, identifier: 'ramesh12@gmail.com' },
   ];
 
   const handleDevAutofill = (acc: typeof devAccounts[0]) => {
@@ -586,8 +588,8 @@ function LoginContent() {
                 required
                 value={workerIdentifier}
                 onChange={(e) => setWorkerIdentifier(e.target.value)}
-                placeholder="field.csmc@govasset.in or CSMC-FW-001"
-                helperText={isDev ? "Development demo: field.csmc@govasset.in or CSMC-WRK-01" : "Enter your official crew email or assigned staff code."}
+                placeholder="ramesh12@gmail.com, field.csmc@govasset.in, or CSMC-100"
+                helperText={isDev ? "Development demo: ramesh12@gmail.com, field.csmc@govasset.in, or CSMC-100" : "Enter your official crew email or assigned staff code."}
               />
 
               <Input

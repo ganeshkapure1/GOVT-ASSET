@@ -10,23 +10,66 @@ import { maskPhoneNumber } from '@/lib/pii';
  */
 export async function GET() {
   try {
-    const session = await requireAuth(['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
+    const session = await requireAuth(['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
 
     const whereConditions: any = {
       status: 'WORK_COMPLETED',
     };
 
-    if (session.departmentId && session.role !== 'PLATFORM_ADMIN') {
+    if (session.departmentId && session.role !== 'PLATFORM_ADMIN' && session.role !== 'OFFICER') {
       whereConditions.departmentId = session.departmentId;
     }
 
-    if (session.role === 'SUPERVISOR' && session.jurisdictionId) {
-      const childWards = await db.jurisdiction.findMany({
-        where: { parentId: session.jurisdictionId },
-        select: { id: true },
-      });
-      const allowedWardIds = [session.jurisdictionId, ...childWards.map((w) => w.id)];
-      whereConditions.jurisdictionId = { in: allowedWardIds };
+    if (session.jurisdictionId && session.role !== 'PLATFORM_ADMIN' && session.role !== 'OFFICER') {
+      const { getCorporationIdForJurisdiction } = await import('@/server/auth');
+      const corporationId = await getCorporationIdForJurisdiction(session.jurisdictionId);
+      if (corporationId) {
+        const corpRecord = await db.jurisdiction.findUnique({
+          where: { id: corporationId },
+          select: { name: true, city: true },
+        });
+
+        const siblingCorps = corpRecord
+          ? await db.jurisdiction.findMany({
+              where: {
+                level: 'DISTRICT_CORP',
+                OR: [
+                  { id: corporationId },
+                  ...(corpRecord.city ? [{ city: corpRecord.city }] : []),
+                  { name: { equals: corpRecord.name, mode: 'insensitive' } },
+                ],
+              },
+              select: { id: true },
+            })
+          : [];
+
+        const allCorpIds = Array.from(new Set([corporationId, ...siblingCorps.map((c) => c.id)]));
+
+        const zones = await db.jurisdiction.findMany({
+          where: { parentId: { in: allCorpIds }, level: 'ZONE' },
+          select: { id: true },
+        });
+        const zoneIds = zones.map((z) => z.id);
+
+        const childJurs = await db.jurisdiction.findMany({
+          where: {
+            OR: [
+              { parentId: { in: zoneIds } },
+              { parentId: { in: allCorpIds } },
+            ],
+          },
+          select: { id: true },
+        });
+
+        const allowedJurIds = [
+          ...allCorpIds,
+          ...zoneIds,
+          ...childJurs.map((w) => w.id),
+        ];
+        whereConditions.jurisdictionId = { in: allowedJurIds };
+      } else {
+        whereConditions.jurisdictionId = session.jurisdictionId;
+      }
     }
 
     const complaints = await db.complaint.findMany({

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const session = await requireAuth(['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
+    const session = await requireAuth(['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
     const body = await request.json();
 
     const { action, rejectionReason, notes } = body;

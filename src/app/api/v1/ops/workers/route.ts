@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth(['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
     const searchParams = request.nextUrl.searchParams;
-    const departmentId = searchParams.get('departmentId') || session.departmentId || undefined;
+    const rawDept = searchParams.get('departmentId');
+    const departmentId = rawDept === 'all' ? undefined : (rawDept || (session.role === 'FIELD_WORKER' ? session.departmentId : undefined));
     const requestedCorpId = searchParams.get('corporationId');
     const includeInactive = searchParams.get('includeInactive') === 'true';
     const includeTasks = searchParams.get('includeTasks') === 'true';
@@ -20,9 +21,9 @@ export async function GET(request: NextRequest) {
 
     // Resolve user's authorized corporation scope
     let corporationId: string | null = null;
-    if (session.role !== 'PLATFORM_ADMIN') {
+    if (session.role !== 'PLATFORM_ADMIN' && session.role !== 'OFFICER') {
       corporationId = await getCorporationIdForJurisdiction(session.jurisdictionId);
-    } else if (requestedCorpId) {
+    } else if (requestedCorpId && requestedCorpId !== 'all') {
       corporationId = requestedCorpId;
     }
 
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Corporation isolation: Non-platform admins cannot onboard workers into other corporations
-    if (session.role !== 'PLATFORM_ADMIN') {
+    if (session.role !== 'PLATFORM_ADMIN' && session.role !== 'OFFICER') {
       const sessionCorpId = await getCorporationIdForJurisdiction(session.jurisdictionId);
       const targetWardId = body.jurisdictionId || session.jurisdictionId;
       if (targetWardId) {

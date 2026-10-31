@@ -30,11 +30,12 @@ export async function setTestSessionCookie(
     jurisdictionId: options.jurisdictionId ?? 'ward-kothrud-28',
   });
 
+  const baseUrl = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3001';
   await context.addCookies([
     {
       name: SESSION_COOKIE_NAME,
       value: token,
-      url: 'http://localhost:3005/',
+      url: baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`,
       sameSite: 'Lax',
     },
   ]);

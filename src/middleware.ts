@@ -41,6 +41,10 @@ export async function middleware(request: NextRequest) {
 
   // 4. Handle Login Page: Redirect already authenticated visitors to their role's home portal
   if (pathname === '/login') {
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
+    if (redirectParam) {
+      return NextResponse.next();
+    }
     if (session) {
       const redirectTarget = getDefaultRedirectForRole(session.role);
       return NextResponse.redirect(new URL(redirectTarget, request.url));

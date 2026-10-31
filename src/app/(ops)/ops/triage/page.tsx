@@ -368,7 +368,7 @@ export default function OpsTriagePage() {
               </div>
               <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Pending Review</h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {locationLabel}
+                Pan-India Civic Grid
               </p>
             </div>
             <div className="mt-4 flex items-baseline gap-3">
@@ -444,10 +444,10 @@ export default function OpsTriagePage() {
               <BuildingIcon className="w-6 h-6" />
             </div>
             <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">
-              {corporation ? corporation.city : 'Municipal Corp'}
+              Pan-India Civic Grid
             </h4>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-              {corporation ? corporation.code : 'GOV-ASSET'}
+              National Console
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">

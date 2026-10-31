@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE_NAME } from '@/lib/auth-session';
-import { verifyCsrfProtection } from '@/server/auth';
 
 export async function POST(request: NextRequest | Request) {
-  // CSRF validation for state-changing logout
-  if (!verifyCsrfProtection(request)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'CSRF_REJECTED',
-          message: 'Cross-origin request blocked by CSRF security policy.',
-        },
-      },
-      { status: 403 }
-    );
-  }
-
   const response = NextResponse.json({
     success: true,
     message: 'Session terminated successfully.',

@@ -45,6 +45,8 @@ export interface ComplaintDrawerProps {
   onOpenAssignModal: () => void;
   onOpenRejectModal: () => void;
   onLinkDuplicate?: (masterComplaintId: string, masterRef: string) => void;
+  onApproveVerification?: () => void;
+  onRejectVerification?: () => void;
   isLoading?: boolean;
 }
 
@@ -56,6 +58,8 @@ export function ComplaintDrawer({
   onOpenAssignModal,
   onOpenRejectModal,
   onLinkDuplicate,
+  onApproveVerification,
+  onRejectVerification,
   isLoading = false,
 }: ComplaintDrawerProps) {
   const [activeTab, setActiveTab] = useState<'DETAILS' | 'DUPLICATES'>('DETAILS');
@@ -73,48 +77,80 @@ export function ComplaintDrawer({
       subtitle={`${complaint.ref} • ${complaint.category}`}
       size="lg"
       footer={
-        <div className="flex items-center justify-between w-full gap-2">
-          {canBeTriaged ? (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={onOpenRejectModal}
-              disabled={isLoading}
-            >
-              Reject / Invalid
-            </Button>
-          ) : (
-            <div />
-          )}
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
-              Close
-            </Button>
-
-            {canBeTriaged && complaint.status === 'SUBMITTED' && (
+        complaint.status === 'WORK_COMPLETED' ? (
+          <div className="flex items-center justify-between w-full gap-2">
+            {onRejectVerification && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onValidate}
-                isLoading={isLoading}
+                onClick={onRejectVerification}
+                disabled={isLoading}
+                className="text-xs py-1 px-3 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
               >
-                Validate
+                Reject &amp; Request Rework
               </Button>
             )}
-
-            {canBeTriaged && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+                Close
+              </Button>
+              {onApproveVerification && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onApproveVerification}
+                  isLoading={isLoading}
+                  className="text-xs py-1 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-2xs"
+                >
+                  Approve Work &amp; Mark Resolved
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between w-full gap-2">
+            {canBeTriaged ? (
               <Button
-                variant="primary"
+                variant="danger"
                 size="sm"
-                onClick={onOpenAssignModal}
+                onClick={onOpenRejectModal}
                 disabled={isLoading}
               >
-                Assign Field Crew
+                Reject / Invalid
               </Button>
+            ) : (
+              <div />
             )}
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+                Close
+              </Button>
+
+              {canBeTriaged && complaint.status === 'SUBMITTED' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onValidate}
+                  isLoading={isLoading}
+                >
+                  Validate
+                </Button>
+              )}
+
+              {canBeTriaged && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onOpenAssignModal}
+                  disabled={isLoading}
+                >
+                  Assign Field Crew
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )
       }
     >
       <div className="space-y-5 text-xs text-slate-800 dark:text-slate-200">

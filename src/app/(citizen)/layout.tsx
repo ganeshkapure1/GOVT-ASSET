@@ -21,7 +21,6 @@ export default function CitizenLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [currentLang, setCurrentLang] = useState<'EN' | 'HI'>('EN');
   const [sessionUser, setSessionUser] = useState<{ fullName: string; role: string } | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
@@ -29,11 +28,22 @@ export default function CitizenLayout({
     let isMounted = true;
     fetch('/api/v1/auth/me')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
+      .then(async (data) => {
         if (!isMounted) return;
-        if (data?.success && data?.user) {
+        // The citizen portal strictly recognizes authenticated CITIZEN accounts only.
+        if (data?.success && data?.user && data.user.role === 'CITIZEN') {
           setSessionUser(data.user);
         } else {
+          // If a staff/officer session was left over in the browser from previous tests,
+          // automatically clear it so fresh visitors to the main citizen portal never see Sachin or any officer pre-signed in!
+          if (data?.user && data.user.role !== 'CITIZEN') {
+            try {
+              if (typeof document !== 'undefined') {
+                document.cookie = 'govasset_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+              }
+              await fetch('/api/v1/auth/logout', { method: 'POST' });
+            } catch {}
+          }
           setSessionUser(null);
         }
       })
@@ -51,14 +61,18 @@ export default function CitizenLayout({
   }, [pathname]);
 
   const isCitizen = Boolean(sessionUser && sessionUser.role === 'CITIZEN');
-  const isStaff = Boolean(sessionUser && sessionUser.role !== 'CITIZEN');
 
   const handleSignOut = async () => {
     try {
+      if (typeof document !== 'undefined') {
+        document.cookie = 'govasset_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
+      }
       await fetch('/api/v1/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+    } catch {
+      // Ignore network errors
     } finally {
       setSessionUser(null);
       window.location.href = '/';
@@ -66,32 +80,11 @@ export default function CitizenLayout({
   };
 
   const navLinks = [
-    { label: currentLang === 'EN' ? 'Home' : 'मुख्य पृष्ठ', href: '/', icon: HomeIcon },
-    { label: currentLang === 'EN' ? 'Track Status' : 'स्थिति जांचें', href: '/track', icon: SearchIcon },
-    { label: currentLang === 'EN' ? 'Report a Problem' : 'समस्या दर्ज करें', href: '/report', icon: PlusIcon },
+    { label: 'Home', href: '/', icon: HomeIcon },
+    { label: 'Track Status', href: '/track', icon: SearchIcon },
+    { label: 'Report a Problem', href: '/report', icon: PlusIcon },
     ...(isCitizen
-      ? [{ label: currentLang === 'EN' ? 'My Grievances' : 'मेरी शिकायतें', href: '/my-complaints', icon: FileTextIcon }]
-      : []),
-    ...(isStaff
-      ? [
-          {
-            label:
-              sessionUser?.role === 'FIELD_WORKER'
-                ? currentLang === 'EN'
-                  ? 'Worker Tasks'
-                  : 'कार्य सूची'
-                : currentLang === 'EN'
-                ? 'Operations Portal'
-                : 'ऑपरेशन्स',
-            href:
-              sessionUser?.role === 'FIELD_WORKER'
-                ? '/ops/field'
-                : sessionUser?.role === 'PLATFORM_ADMIN'
-                ? '/admin'
-                : '/ops/triage',
-            icon: ShieldCheckIcon,
-          },
-        ]
+      ? [{ label: 'My Grievances', href: '/my-complaints', icon: FileTextIcon }]
       : []),
   ];
 
@@ -114,26 +107,16 @@ export default function CitizenLayout({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
             <span className="font-semibold tracking-wide text-slate-800 dark:text-slate-200">
-              {currentLang === 'EN'
-                ? 'GovAsset • National Civic Infrastructure & Grievance Redressal Platform (Pan-India)'
-                : 'गवएसेट • राष्ट्रीय नागरी पायाभूत सुविधा व तक्रार निवारण प्रणाली (अखिल भारतीय)'}
+              GovAsset • National Civic Infrastructure &amp; Grievance Redressal Platform (Pan-India)
             </span>
           </div>
           <div className="flex items-center gap-4 text-slate-600 dark:text-slate-300">
             <div className="flex items-center gap-1.5">
               <PhoneIcon className="w-3 h-3 text-[#0B4FC2] dark:text-sky-400" />
               <span>
-                {currentLang === 'EN' ? 'Toll-Free Helpline: ' : 'टोल-फ्री हेल्पलाइन: '}
-                <strong className="text-slate-900 dark:text-white font-mono font-bold">1800-233-4000</strong>
+                Toll-Free Helpline: <strong className="text-slate-900 dark:text-white font-mono font-bold">1800-233-4000</strong>
               </span>
             </div>
-            <span className="text-slate-300 dark:text-slate-700 hidden md:inline">|</span>
-            <Link
-              href="/ops/triage"
-              className="text-[#0B4FC2] dark:text-cyan-400 hover:underline font-semibold hidden md:inline transition-colors"
-            >
-              Official Ops Portal &rarr;
-            </Link>
           </div>
         </div>
       </div>
@@ -156,20 +139,14 @@ export default function CitizenLayout({
                     <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">
                       Gov<span className="text-[#0B4FC2] dark:text-blue-400">Asset</span>
                     </span>
-                    {isCitizen ? (
+                    {isCitizen && (
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#0B4FC2] border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800">
                         Citizen Hub
                       </span>
-                    ) : isStaff ? (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
-                        {sessionUser?.role.replace('_', ' ')}
-                      </span>
-                    ) : null}
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    {currentLang === 'EN'
-                      ? 'Digital Civic Asset & Grievance Optimization'
-                      : 'डिजिटल नागरी पायाभूत सुविधा व तक्रार निवारण'}
+                    Digital Civic Asset &amp; Grievance Optimization
                   </p>
                 </div>
               </Link>
@@ -203,41 +180,13 @@ export default function CitizenLayout({
               {/* Theme Toggle */}
               <ThemeToggle variant="pill" />
 
-              {/* Language Switcher */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('EN')}
-                  className={`px-2.5 py-1 rounded-md transition-all ${
-                    currentLang === 'EN'
-                      ? 'bg-white text-slate-900 shadow-2xs dark:bg-slate-700 dark:text-white'
-                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                  }`}
-                  aria-label="EN - Switch language to English"
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('HI')}
-                  className={`px-2.5 py-1 rounded-md transition-all ${
-                    currentLang === 'HI'
-                      ? 'bg-white text-slate-900 shadow-2xs dark:bg-slate-700 dark:text-white'
-                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                  }`}
-                  aria-label="हिन्दी - भाषा हिंदी में बदलें"
-                >
-                  हिन्दी
-                </button>
-              </div>
-
-              {/* Prominent Desktop "Report Defect" Action (For citizens and visitors) */}
+              {/* Prominent Desktop "Report Defect" Action */}
               <Link
                 href="/report"
                 className="hidden lg:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0B4FC2] dark:bg-blue-600 text-white text-sm font-bold hover:bg-blue-800 dark:hover:bg-blue-500 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#0B4FC2] focus:ring-offset-2 dark:focus:ring-offset-slate-900"
               >
                 <PlusIcon className="w-4 h-4" />
-                <span>{currentLang === 'EN' ? 'Report a Problem' : 'शिकायत दर्ज करें'}</span>
+                <span>Report a Problem</span>
               </Link>
 
               {/* Login / Auth */}
@@ -259,31 +208,6 @@ export default function CitizenLayout({
                     Sign Out
                   </button>
                 </div>
-              ) : isStaff ? (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={
-                      sessionUser?.role === 'FIELD_WORKER'
-                        ? '/ops/field'
-                        : sessionUser?.role === 'PLATFORM_ADMIN'
-                        ? '/admin'
-                        : '/ops/triage'
-                    }
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <span>{sessionUser?.fullName.split(' ')[0]}</span>
-                    <span className="text-[10px] text-[#0B4FC2] dark:text-blue-400 uppercase">
-                      ({sessionUser?.role.replace('_', ' ')})
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200/80 dark:border-slate-700/80"
-                  >
-                    Sign Out
-                  </button>
-                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Link
@@ -291,13 +215,13 @@ export default function CitizenLayout({
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl transition-colors border border-slate-200/80 dark:border-slate-700/80"
                   >
                     <UserIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>{currentLang === 'EN' ? 'Login' : 'लॉग इन'}</span>
+                    <span>Login</span>
                   </Link>
                   <Link
                     href="/login"
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0B4FC2] dark:bg-blue-600 text-white text-sm font-bold hover:bg-blue-800 dark:hover:bg-blue-500 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#0B4FC2]"
                   >
-                    <span>{currentLang === 'EN' ? 'Get Started' : 'शुरू करें'}</span>
+                    <span>Get Started</span>
                   </Link>
                 </div>
               )}
@@ -361,23 +285,15 @@ export default function CitizenLayout({
         )}
 
         <Link
-          href={
-            sessionUser
-              ? isCitizen
-                ? '/my-complaints'
-                : isStaff
-                ? sessionUser.role === 'FIELD_WORKER'
-                  ? '/ops/field'
-                  : '/ops/triage'
-                : '/login'
-              : '/login'
-          }
+          href={isCitizen ? '/my-complaints' : '/login'}
           className={`flex flex-col items-center justify-center w-16 h-full text-xs font-semibold ${
-            pathname === '/login' ? 'text-[#0B4FC2] dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+            pathname === '/login' || pathname.startsWith('/my-complaints')
+              ? 'text-[#0B4FC2] dark:text-blue-400'
+              : 'text-slate-500 dark:text-slate-400'
           }`}
         >
           <UserIcon className="w-5 h-5 mb-0.5" />
-          <span>{sessionUser ? (isCitizen ? sessionUser.fullName.split(' ')[0] : 'Staff') : 'Login'}</span>
+          <span>{isCitizen ? sessionUser?.fullName.split(' ')[0] : 'Login'}</span>
         </Link>
       </nav>
 
@@ -396,7 +312,7 @@ export default function CitizenLayout({
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                An open, audited civic technology platform built to track, assign, verify, and resolve public infrastructure defects across municipal wards with transparent SLAs.
+                An open, audited civic technology platform built to track, assign, verify, and resolve public infrastructure defects across municipal jurisdictions with transparent SLAs.
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium shadow-2xs">
                 <ShieldCheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -445,8 +361,8 @@ export default function CitizenLayout({
               </h3>
               <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
                 <li className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                  <span>CSMC Central Disaster Cell</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">1077 / 0240-2333536</span>
+                  <span>National Disaster Helplines</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">1077 / 112</span>
                 </li>
                 <li className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
                   <span>PWD Roads Control Room</span>

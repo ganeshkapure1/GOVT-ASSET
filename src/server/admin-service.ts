@@ -1268,11 +1268,13 @@ export async function updateStaffAccess(
     if (input.role && input.role !== 'FIELD_WORKER') {
       throw new AdminServiceError('FORBIDDEN', 403, 'Operations officers cannot alter user roles.');
     }
-    if (adminSession.jurisdictionId && targetUser.jurisdictionId) {
-      const officerCorpId = await getCorporationIdForJurisdiction(adminSession.jurisdictionId);
-      const targetCorpId = await getCorporationIdForJurisdiction(targetUser.jurisdictionId);
-      if (officerCorpId && targetCorpId && officerCorpId !== targetCorpId) {
-        throw new AdminServiceError('FORBIDDEN', 403, 'Cross-corporation crew management is forbidden.');
+    if (adminSession.role === 'SUPERVISOR') {
+      if (adminSession.jurisdictionId && targetUser.jurisdictionId) {
+        const officerCorpId = await getCorporationIdForJurisdiction(adminSession.jurisdictionId);
+        const targetCorpId = await getCorporationIdForJurisdiction(targetUser.jurisdictionId);
+        if (officerCorpId && targetCorpId && officerCorpId !== targetCorpId) {
+          throw new AdminServiceError('FORBIDDEN', 403, 'Cross-corporation crew management is forbidden.');
+        }
       }
     }
   }
@@ -1391,12 +1393,14 @@ export async function inviteStaffUser(
     if (role !== 'FIELD_WORKER') {
       throw new AdminServiceError('FORBIDDEN', 403, 'Operations officers can only onboard field workers.');
     }
-    // Corporation isolation check
-    if (adminSession.jurisdictionId && jurisdictionId) {
-      const officerCorpId = await getCorporationIdForJurisdiction(adminSession.jurisdictionId);
-      const targetCorpId = await getCorporationIdForJurisdiction(jurisdictionId);
-      if (officerCorpId && targetCorpId && officerCorpId !== targetCorpId) {
-        throw new AdminServiceError('FORBIDDEN', 403, 'Cannot onboard field workers into another municipal corporation.');
+    // Corporation isolation check: supervisors only
+    if (adminSession.role === 'SUPERVISOR') {
+      if (adminSession.jurisdictionId && jurisdictionId) {
+        const officerCorpId = await getCorporationIdForJurisdiction(adminSession.jurisdictionId);
+        const targetCorpId = await getCorporationIdForJurisdiction(jurisdictionId);
+        if (officerCorpId && targetCorpId && officerCorpId !== targetCorpId) {
+          throw new AdminServiceError('FORBIDDEN', 403, 'Cannot onboard field workers into another municipal corporation.');
+        }
       }
     }
   }

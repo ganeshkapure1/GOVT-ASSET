@@ -31,16 +31,22 @@ export function Drawer({
   size = 'md',
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const hasAutoFocusedRef = useRef(false);
   const titleId = useId();
   const subtitleId = useId();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      hasAutoFocusedRef.current = false;
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -70,21 +76,25 @@ export function Drawer({
     window.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
 
-    // Auto focus first interactive element
-    setTimeout(() => {
-      if (drawerRef.current) {
-        const firstFocusable = drawerRef.current.querySelector<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        firstFocusable?.focus();
-      }
-    }, 50);
+    // Auto focus first interactive element ONLY ONCE on initial open (not on parent re-renders)
+    if (!hasAutoFocusedRef.current) {
+      hasAutoFocusedRef.current = true;
+      setTimeout(() => {
+        if (drawerRef.current) {
+          if (drawerRef.current.contains(document.activeElement)) return;
+          const firstFocusable = drawerRef.current.querySelector<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          firstFocusable?.focus();
+        }
+      }, 50);
+    }
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

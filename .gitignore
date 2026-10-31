@@ -35,3 +35,8 @@ next-env.d.ts
 
 # mock storage
 .storage_mock/
+
+# test reports & test results
+/playwright-report/
+/test-results/
+

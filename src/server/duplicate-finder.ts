@@ -317,5 +317,5 @@ export async function linkDuplicateComplaint(input: LinkDuplicateInput) {
     });
 
     return updated;
-  });
+  }, { maxWait: 20000, timeout: 60000 });
 }

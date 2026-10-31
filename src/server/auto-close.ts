@@ -135,7 +135,7 @@ export async function autoCloseResolvedComplaints(
         });
 
         result.closed++;
-      });
+      }, { maxWait: 20000, timeout: 60000 });
     } catch (err: any) {
       result.errors.push({ complaintId: complaint.id, error: err?.message || 'Unknown error' });
     }

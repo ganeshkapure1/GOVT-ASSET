@@ -25,6 +25,29 @@ import {
 export default function CitizenLandingPage() {
   const router = useRouter();
   const [trackRef, setTrackRef] = useState('');
+  const [sessionUser, setSessionUser] = useState<{ role: string } | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch('/api/v1/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return;
+        if (data?.success && data?.user && data.user.role === 'CITIZEN') {
+          setSessionUser(data.user);
+        } else {
+          setSessionUser(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setSessionUser(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const reportLinkHref = '/report';
 
   const handleTrackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +137,7 @@ export default function CitizenLandingPage() {
     {
       ref: 'GOV-2026-00482',
       title: 'Deep crater pothole opposite Metro Station Gate 2',
-      ward: 'Shivaji Nagar Sector',
+      location: 'Shivaji Nagar Sector',
       category: 'Damaged Roads',
       status: 'IN_PROGRESS' as const,
       time: '18m ago',
@@ -123,7 +146,7 @@ export default function CitizenLandingPage() {
     {
       ref: 'GOV-2026-00483',
       title: 'Dark streetlight junction outside City Dispensary',
-      ward: 'Kothrud Central',
+      location: 'Kothrud Central',
       category: 'Streetlights',
       status: 'VERIFIED_RESOLVED' as const,
       time: '1h ago',
@@ -132,7 +155,7 @@ export default function CitizenLandingPage() {
     {
       ref: 'GOV-2026-00485',
       title: 'Sewage manhole overflow near Community Hall',
-      ward: 'Hadapsar Bypass',
+      location: 'Hadapsar Bypass',
       category: 'Water & Sewage',
       status: 'TRIAGED' as const,
       time: '2h ago',
@@ -151,7 +174,7 @@ export default function CitizenLandingPage() {
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-[#0B4FC2] dark:text-blue-300 text-xs font-semibold shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
-              Live Civic Infrastructure Tracking • Chhatrapati Sambhajinagar Municipal Corporation
+              National Civic Infrastructure &amp; Grievance Redressal • Pan-India Coverage (36 States &amp; UTs)
             </div>
             <div className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
               <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -229,7 +252,7 @@ export default function CitizenLandingPage() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 relative z-10">
-                <Link href="/report" className="block w-full">
+                <Link href={reportLinkHref} className="block w-full">
                   <Button
                     variant="primary"
                     size="lg"
@@ -393,7 +416,7 @@ export default function CitizenLandingPage() {
             </p>
           </div>
           <Link
-            href="/report"
+            href={reportLinkHref}
             className="inline-flex items-center gap-1 text-sm font-bold text-[#0B4FC2] dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 shrink-0"
           >
             <span>View All Categories</span>
@@ -405,10 +428,11 @@ export default function CitizenLandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((cat) => {
             const Icon = cat.icon;
+            const catHref = `/report?category=${encodeURIComponent(cat.id)}`;
             return (
               <Link
                 key={cat.id}
-                href={`/report?category=${encodeURIComponent(cat.id)}`}
+                href={catHref}
                 className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 flex flex-col justify-between shadow-subtle hover:shadow-xl dark:hover:shadow-2xl ${cat.border} transition-all duration-200 group relative overflow-hidden`}
               >
                 <div className="space-y-4">
@@ -574,7 +598,7 @@ export default function CitizenLandingPage() {
                 </h4>
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                   <MapPinIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>{item.ward}</span>
+                  <span>{item.location}</span>
                 </div>
               </div>
 
@@ -607,7 +631,7 @@ export default function CitizenLandingPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full md:w-auto">
-            <Link href="/report" className="w-full sm:w-auto">
+            <Link href={reportLinkHref} className="w-full sm:w-auto">
               <Button
                 variant="primary"
                 size="lg"
