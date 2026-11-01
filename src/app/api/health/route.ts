@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getEnvConfig } from '@/lib/env';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/health
  *

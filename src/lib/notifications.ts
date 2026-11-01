@@ -449,13 +449,19 @@ export async function sendNotification(
     }
 
     if (dispatchResult.success) {
-      await db.notification.update({
-        where: { id: notificationId },
-        data: {
-          status: 'SENT',
-          sentAt: new Date(),
-        },
-      });
+      try {
+        if (!notificationId.startsWith('notif_')) {
+          await db.notification.update({
+            where: { id: notificationId },
+            data: {
+              status: 'SENT',
+              sentAt: new Date(),
+            },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Failed to update notification status in DB:', dbErr);
+      }
 
       return {
         id: notificationId,
@@ -468,13 +474,19 @@ export async function sendNotification(
         sentAt: new Date(),
       };
     } else {
-      await db.notification.update({
-        where: { id: notificationId },
-        data: {
-          status: 'FAILED',
-          errorMessage: dispatchResult.error || 'Provider rejected dispatch request',
-        },
-      });
+      try {
+        if (!notificationId.startsWith('notif_')) {
+          await db.notification.update({
+            where: { id: notificationId },
+            data: {
+              status: 'FAILED',
+              errorMessage: dispatchResult.error || 'Provider rejected dispatch request',
+            },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Failed to record notification failure in DB:', dbErr);
+      }
 
       return {
         id: notificationId,

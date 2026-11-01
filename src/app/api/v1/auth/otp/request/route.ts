@@ -55,12 +55,13 @@ export async function POST(request: NextRequest) {
       ...(result.mockOtpNotice ? { mockNotice: result.mockOtpNotice } : {}),
     });
   } catch (err: any) {
+    console.error('[AUTH_OTP_REQUEST_ERROR]', err);
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'Failed to process OTP verification request.',
+          message: err?.message || 'Failed to process OTP verification request.',
         },
       },
       { status: 500 }

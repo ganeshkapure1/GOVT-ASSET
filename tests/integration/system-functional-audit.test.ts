@@ -245,11 +245,13 @@ describe('GovAsset Complete System Functional Audit & Workflow Verification', ()
     it('fails closed in production if SMS gateway is not configured', async () => {
       const originalEnv = process.env.NODE_ENV;
       const originalSmsMock = process.env.SMS_MOCK;
+      const originalTextBee = process.env.TEXTBEE_API_KEY;
       try {
         (process.env as any).NODE_ENV = 'production';
         process.env.SMS_MOCK = '1';
         delete process.env.FAST2SMS_API_KEY;
         delete process.env.MSG91_AUTH_KEY;
+        delete process.env.TEXTBEE_API_KEY;
         delete process.env.SMS_API_KEY;
 
         const res = await requestPhoneOtp('+919822010008');
@@ -258,6 +260,7 @@ describe('GovAsset Complete System Functional Audit & Workflow Verification', ()
       } finally {
         (process.env as any).NODE_ENV = originalEnv;
         process.env.SMS_MOCK = originalSmsMock;
+        process.env.TEXTBEE_API_KEY = originalTextBee;
       }
     });
   });

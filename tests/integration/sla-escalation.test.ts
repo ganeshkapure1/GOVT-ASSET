@@ -507,12 +507,14 @@ describe('Phase 9: Notifications, SLA Escalation Engine & Background Tasks', () 
       const originalEnv = process.env.NODE_ENV;
       const originalFast2Sms = process.env.FAST2SMS_API_KEY;
       const originalMsg91 = process.env.MSG91_AUTH_KEY;
+      const originalTextBee = process.env.TEXTBEE_API_KEY;
       const originalSmsMock = process.env.SMS_MOCK;
 
       try {
         (process.env as any).NODE_ENV = 'production';
         process.env.FAST2SMS_API_KEY = '';
         process.env.MSG91_AUTH_KEY = '';
+        process.env.TEXTBEE_API_KEY = '';
         process.env.SMS_API_KEY = '';
         process.env.SMS_MOCK = '0';
 
@@ -523,6 +525,7 @@ describe('Phase 9: Notifications, SLA Escalation Engine & Background Tasks', () 
         (process.env as any).NODE_ENV = originalEnv;
         process.env.FAST2SMS_API_KEY = originalFast2Sms;
         process.env.MSG91_AUTH_KEY = originalMsg91;
+        process.env.TEXTBEE_API_KEY = originalTextBee;
         process.env.SMS_MOCK = originalSmsMock;
       }
     });
