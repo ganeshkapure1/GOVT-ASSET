@@ -56,6 +56,41 @@ function LoginContent() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+    const [fillSuccessNotice, setFillSuccessNotice] = useState<string | null>(null);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setShowPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleUseCitizenDemo = (phone: string) => {
+    setActiveTab('CITIZEN');
+    setMobile(phone);
+    setOtpStep('INPUT_PHONE');
+    setOtpCode('');
+    setAuthError(null);
+    setFillSuccessNotice('Demo credentials filled successfully.');
+    setTimeout(() => setFillSuccessNotice(null), 3500);
+  };
+
+  const handleUseOfficialDemo = (email: string, password = 'password123') => {
+    setActiveTab('OFFICIAL');
+    setOfficialEmail(email);
+    setOfficialPassword(password);
+    setAuthError(null);
+    setFillSuccessNotice('Demo credentials filled successfully.');
+    setTimeout(() => setFillSuccessNotice(null), 3500);
+  };
+
+  const handleUseWorkerDemo = (identifier: string, password = 'password123') => {
+    setActiveTab('WORKER');
+    setWorkerIdentifier(identifier);
+    setWorkerPassword(password);
+    setAuthError(null);
+    setFillSuccessNotice('Demo credentials filled successfully.');
+    setTimeout(() => setFillSuccessNotice(null), 3500);
+  };
+
   const copyToClipboard = (text: string, key: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -262,6 +297,108 @@ function LoginContent() {
       setIsLoading(false);
     }
   };
+
+    // Structured Demo Accounts for College Pilot Evaluation
+  const citizenDemoAccounts = [
+    {
+      id: 'cit_csmc',
+      label: 'Demo Citizen (CSMC Ward 01)',
+      name: 'Aniket Deshpande',
+      phone: '+919822010108',
+      roleBadge: 'CSMC Resident',
+      description: 'Pre-registered citizen in CSMC Shahaganj ward with active road repair tickets.',
+    },
+    {
+      id: 'cit_pmc',
+      label: 'Demo Citizen (Pune PMC)',
+      name: 'Aarav Mehta',
+      phone: '+919822010008',
+      roleBadge: 'PMC Resident',
+      description: 'Pre-registered citizen in PMC Ward 28 with streetlight and drainage tickets.',
+    },
+  ];
+
+  const officialDemoAccounts = [
+    {
+      id: 'off_csmc',
+      label: 'CSMC Ward Triage Officer',
+      name: 'Sachin Waghmare',
+      email: 'officer.csmc@govasset.in',
+      password: 'password123',
+      roleBadge: 'Ward Triage Officer',
+      jurisdiction: 'CSMC Ward 01 (Shahaganj)',
+      description: 'Evaluates civic tickets, assigns priority levels, and dispatches field maintenance crews.',
+    },
+    {
+      id: 'sup_csmc',
+      label: 'Civil Works Supervisor',
+      name: 'Pooja Gaikwad',
+      email: 'supervisor.csmc@govasset.in',
+      password: 'password123',
+      roleBadge: 'Civil Supervisor',
+      jurisdiction: 'CSMC Zone 01 Roads & Infrastructure',
+      description: 'Performs quality inspections, reviews work completion proofs, and certifies resolution.',
+    },
+    {
+      id: 'off_pmc',
+      label: 'Pune Ward 28 Officer',
+      name: 'Sunita Patil',
+      email: 'officer.kothrud@govasset.in',
+      password: 'password123',
+      roleBadge: 'Ward Triage Officer',
+      jurisdiction: 'PMC Ward 28 (Kothrud)',
+      description: 'Manages incoming municipal complaints within PMC jurisdiction.',
+    },
+    {
+      id: 'admin_platform',
+      label: 'Platform Administrator',
+      name: 'Rajesh Sharma',
+      email: 'admin@govasset.in',
+      password: 'password123',
+      roleBadge: 'Platform Admin',
+      jurisdiction: 'Pan-India Cross-Corporation Oversight',
+      description: 'Complete administrative oversight across municipal corporations, SLA matrices, and audit logs.',
+    },
+  ];
+
+  const workerDemoAccounts = [
+    {
+      id: 'wrk_csmc_road',
+      label: 'Senior Road Crew Lead',
+      name: 'Ganesh Shinde',
+      identifier: 'field.csmc@govasset.in',
+      staffCode: 'CSMC-WRK-01',
+      password: 'password123',
+      roleBadge: 'Road Crew Lead',
+      skills: 'Road Repair, Asphalt Paving, Roller Operation, Cold Mix Patching',
+      description: 'Assigned to active road maintenance, pothole repairs, and asphalt leveling work orders.',
+    },
+    {
+      id: 'wrk_csmc_elec',
+      label: 'Electrical & Pipelines Crew',
+      name: 'Ramesh Kale',
+      identifier: 'ramesh12@gmail.com',
+      staffCode: 'CSMC-100',
+      password: 'password123',
+      roleBadge: 'Field Specialist',
+      skills: 'Streetlight Repair, Electrical Maintenance, Pipeline Repair',
+      description: 'Specialist managing street lighting and water pipeline maintenance orders.',
+    },
+    {
+      id: 'wrk_pmc_road',
+      label: 'Pune Road Maintenance Lead',
+      name: 'Vikram Singh',
+      identifier: 'field.vikram@govasset.in',
+      staffCode: 'PMC-FW-001',
+      password: 'password123',
+      roleBadge: 'Road Crew Lead',
+      skills: 'Road Repair, Bitumen Rolling, Heavy Equipment Operation',
+      description: 'Field crew lead executing work orders in Pune Municipal Corporation.',
+    },
+  ];
+
+  const isDemoQuery = searchParams.get('demo') === 'true' || searchParams.get('demo') === '1';
+  const showDemoCredentials = isDev || isDemoQuery;
 
   // Development Quick Presets (Only used inside development toggle)
   const devAccounts = [
@@ -711,38 +848,274 @@ function LoginContent() {
             </span>
           </div>
 
-          {/* Explicit Development / Demonstration Sandbox Mechanism */}
-          {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') ? (
-            <details className="pt-4 border-t border-slate-200 dark:border-slate-800 group text-xs text-slate-500" open>
-              <summary className="cursor-pointer text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 list-none flex items-center justify-between select-none">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                  <span className="font-bold text-slate-700 dark:text-slate-200">Demonstration Credentials (Click role to autofill portal)</span>
+          {/* Professional Demo Credentials - Pilot Evaluation Section */}
+          {showDemoCredentials ? (
+            <div className="pt-5 border-t border-slate-200 dark:border-slate-800 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Demo Credentials – Pilot Evaluation
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Select a demo account to automatically fill the login details.
+                  </p>
                 </div>
-                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">Demo Mode</span>
-              </summary>
-              <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <p className="text-[10px] text-slate-500 text-center">
-                  Click any role below to autofill valid test credentials into the active portal:
-                </p>
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {devAccounts.map((acc) => (
-                    <button
-                      key={acc.label}
-                      type="button"
-                      onClick={() => handleDevAutofill(acc)}
-                      className="px-2.5 py-1 text-[10px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-[#0B4FC2] dark:hover:text-blue-300 transition-colors shadow-2xs"
-                    >
-                      {acc.label}
-                    </button>
-                  ))}
+                <span className="text-[10px] uppercase tracking-wider font-mono font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  Pilot Demo
+                </span>
+              </div>
+
+              {/* Citizen Demo Accounts */}
+              {activeTab === 'CITIZEN' && (
+                <div className="space-y-2.5">
+                  <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <UserCheckIcon className="w-3.5 h-3.5 text-[#0B4FC2] dark:text-blue-400" />
+                    <span>Demonstration Citizen Accounts:</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {citizenDemoAccounts.map((acc) => (
+                      <div
+                        key={acc.id}
+                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {acc.label}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-[#0B4FC2] dark:text-blue-300 font-bold shrink-0">
+                              {acc.roleBadge}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
+                            {acc.name}
+                          </p>
+                          <div className="mt-1.5 flex items-center justify-between text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold">{acc.phone}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(acc.phone, acc.id)}
+                              className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold"
+                            >
+                              {copiedKey === acc.id ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                            {acc.description}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          onClick={() => handleUseCitizenDemo(acc.phone)}
+                          className="rounded-lg text-xs font-bold py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950 text-[#0B4FC2] dark:text-blue-300"
+                        >
+                          Use Demo Account
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Official Demo Accounts */}
+              {activeTab === 'OFFICIAL' && (
+                <div className="space-y-2.5">
+                  <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <BuildingIcon className="w-3.5 h-3.5 text-[#0B4FC2] dark:text-blue-400" />
+                    <span>Demonstration Government Official Accounts:</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {officialDemoAccounts.map((acc) => (
+                      <div
+                        key={acc.id}
+                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {acc.label}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-[#0B4FC2] dark:text-blue-300 font-bold shrink-0">
+                              {acc.roleBadge}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
+                            {acc.name}
+                          </p>
+
+                          <div className="mt-1.5 flex items-center justify-between text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-800 dark:text-slate-200 truncate pr-1 text-[11px]">{acc.email}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(acc.email, acc.id + '_email')}
+                              className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold shrink-0"
+                            >
+                              {copiedKey === acc.id + '_email' ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+
+                          <div className="mt-1 flex items-center justify-between text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-700 dark:text-slate-300 text-[11px]">
+                              {showPasswords[acc.id] ? acc.password : '••••••••••••'}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(acc.id)}
+                                className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold"
+                              >
+                                {showPasswords[acc.id] ? 'Hide' : 'Show'}
+                              </button>
+                              <span>·</span>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(acc.password, acc.id + '_pwd')}
+                                className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold"
+                              >
+                                {copiedKey === acc.id + '_pwd' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                            {acc.jurisdiction}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          onClick={() => handleUseOfficialDemo(acc.email, acc.password)}
+                          className="rounded-lg text-xs font-bold py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950 text-[#0B4FC2] dark:text-blue-300"
+                        >
+                          Use Demo Account
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Worker Demo Accounts */}
+              {activeTab === 'WORKER' && (
+                <div className="space-y-2.5">
+                  <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <WrenchIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Demonstration Field Worker Accounts:</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {workerDemoAccounts.map((acc) => (
+                      <div
+                        key={acc.id}
+                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {acc.label}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-bold shrink-0">
+                              {acc.staffCode}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
+                            {acc.name}
+                          </p>
+
+                          <div className="mt-1.5 flex items-center justify-between text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-800 dark:text-slate-200 truncate pr-1 text-[11px]">{acc.identifier}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(acc.identifier, acc.id + '_id')}
+                              className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold shrink-0"
+                            >
+                              {copiedKey === acc.id + '_id' ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+
+                          <div className="mt-1 flex items-center justify-between text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-700 dark:text-slate-300 text-[11px]">
+                              {showPasswords[acc.id] ? acc.password : '••••••••••••'}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(acc.id)}
+                                className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold"
+                              >
+                                {showPasswords[acc.id] ? 'Hide' : 'Show'}
+                              </button>
+                              <span>·</span>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(acc.password, acc.id + '_pwd')}
+                                className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-sans font-bold"
+                              >
+                                {copiedKey === acc.id + '_pwd' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                            Skills: {acc.skills}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          onClick={() => handleUseWorkerDemo(acc.identifier, acc.password)}
+                          className="rounded-lg text-xs font-bold py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                        >
+                          Use Demo Account
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Roles Quick Switcher */}
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-1.5">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Quick Portal Switch:</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('CITIZEN')}
+                    className={`px-2 py-0.5 rounded font-bold transition-colors ${activeTab === 'CITIZEN' ? 'bg-[#0B4FC2] text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    Citizen Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('OFFICIAL')}
+                    className={`px-2 py-0.5 rounded font-bold transition-colors ${activeTab === 'OFFICIAL' ? 'bg-[#0B4FC2] text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    Official Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('WORKER')}
+                    className={`px-2 py-0.5 rounded font-bold transition-colors ${activeTab === 'WORKER' ? 'bg-emerald-700 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    Worker Demo
+                  </button>
                 </div>
               </div>
-            </details>
+            </div>
           ) : (
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center">
               <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                Production mode active • Demo credentials disabled. Set <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[9px]">NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS=true</code> in Vercel to show evaluation credentials.
+                Production mode active • Demo credentials disabled. Configure <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[9px]">NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS=true</code> in Vercel to activate pilot evaluation accounts.
               </p>
             </div>
           )}
