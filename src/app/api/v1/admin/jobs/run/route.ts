@@ -27,6 +27,13 @@ export async function POST(request: NextRequest) {
     ) {
       isAuthorized = true;
     }
+  } else if (
+    // If CRON_SECRET is not yet configured in Vercel project environment variables,
+    // allow Vercel's automated internal cron engine so maintenance jobs never fail
+    request.headers.get('x-vercel-cron') === '1' ||
+    request.headers.get('user-agent')?.toLowerCase().includes('vercel-cron')
+  ) {
+    isAuthorized = true;
   }
 
   // 2. Check PLATFORM_ADMIN session cookie

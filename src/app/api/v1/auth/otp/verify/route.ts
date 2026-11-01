@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await verifyPhoneOtp(phoneNumber, otp);
+    const challengeCookie = request.cookies.get('govasset_otp_challenge')?.value;
+    const result = await verifyPhoneOtp(phoneNumber, otp, new Date(), challengeCookie);
 
     if (!result.success || !result.sessionToken) {
       return NextResponse.json(
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
       path: '/',
       maxAge: SESSION_DURATION_SECONDS,
     });
+
+    // Clear consumed challenge cookie
+    response.cookies.delete('govasset_otp_challenge');
 
     return response;
   } catch (err: any) {

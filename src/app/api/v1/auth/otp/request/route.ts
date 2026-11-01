@@ -49,11 +49,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: result.message,
       ...(result.mockOtpNotice ? { mockNotice: result.mockOtpNotice } : {}),
     });
+
+    if (result.challengeToken) {
+      response.cookies.set({
+        name: 'govasset_otp_challenge',
+        value: result.challengeToken,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 600,
+      });
+    }
+
+    return response;
   } catch (err: any) {
     console.error('[AUTH_OTP_REQUEST_ERROR]', err);
     return NextResponse.json(

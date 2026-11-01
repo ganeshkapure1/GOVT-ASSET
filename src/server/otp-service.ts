@@ -38,11 +38,53 @@ function hashOtp(otp: string, salt: string, phone: string): string {
     .digest('hex');
 }
 
+/**
+ * Creates an HMAC-SHA256 signed stateless OTP challenge token for distributed serverless reliability.
+ */
+export function createSignedOtpChallenge(challenge: {
+  phone: string;
+  hash: string;
+  salt: string;
+  expiresAt: number;
+}): string {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'govasset-dev-secret-key-must-be-at-least-32-bytes-long!';
+  const payloadStr = JSON.stringify(challenge);
+  const payloadB64 = Buffer.from(payloadStr).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(payloadB64).digest('base64url');
+  return `${payloadB64}.${signature}`;
+}
+
+/**
+ * Validates and decodes a stateless OTP challenge token.
+ */
+export function verifySignedOtpChallenge(token: string): {
+  phone: string;
+  hash: string;
+  salt: string;
+  expiresAt: number;
+} | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payloadB64, signature] = parts;
+    const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'govasset-dev-secret-key-must-be-at-least-32-bytes-long!';
+    const expectedSig = crypto.createHmac('sha256', secret).update(payloadB64).digest('base64url');
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+      return null;
+    }
+    const payloadStr = Buffer.from(payloadB64, 'base64url').toString('utf8');
+    return JSON.parse(payloadStr);
+  } catch {
+    return null;
+  }
+}
+
 export interface RequestOtpResult {
   success: boolean;
   message: string;
   cooldownRemainingSeconds?: number;
   mockOtpNotice?: string;
+  challengeToken?: string;
   error?: string;
 }
 
@@ -122,7 +164,9 @@ export async function requestPhoneOtp(
     (process.env.SMS_API_KEY && process.env.SMS_MOCK !== '1')
   );
   const isDemoOtpEnabled =
-    (process.env.ENABLE_DEMO_OTP === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') &&
+    (process.env.ENABLE_DEMO_OTP === 'true' ||
+      process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ||
+      process.env.NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS === 'true') &&
     process.env.VITEST !== 'true' &&
     process.env.NODE_ENV !== 'test';
 
@@ -167,6 +211,12 @@ export async function requestPhoneOtp(
   const response: RequestOtpResult = {
     success: true,
     message: 'If the mobile number is valid, a 6-digit verification code has been dispatched.',
+    challengeToken: createSignedOtpChallenge({
+      phone,
+      hash: hashed,
+      salt,
+      expiresAt: now + OTP_TTL_MS,
+    }),
   };
 
   // Safe developer indicator for local offline environments or explicit demo evaluation mode
@@ -183,7 +233,8 @@ export async function requestPhoneOtp(
 export async function verifyPhoneOtp(
   rawPhone: string,
   enteredOtp: string,
-  referenceNow = new Date()
+  referenceNow = new Date(),
+  challengeToken?: string
 ): Promise<VerifyOtpResult> {
   if (!validatePhoneNumber(rawPhone)) {
     return { success: false, error: 'Invalid phone number format.', message: 'Invalid phone format.' };
@@ -194,7 +245,27 @@ export async function verifyPhoneOtp(
   }
 
   const phone = formatIndianPhoneNumber(rawPhone);
-  const challenge = otpChallengeStore.get(phone);
+  let challenge = otpChallengeStore.get(phone);
+
+  // Distributed Serverless Fallback: If memory challenge is not found on this container instance,
+  // verify and restore from the cryptographically signed challenge token
+  if ((!challenge || challenge.isUsed) && challengeToken) {
+    const verified = verifySignedOtpChallenge(challengeToken);
+    if (verified && verified.phone === phone) {
+      challenge = {
+        phone: verified.phone,
+        hash: verified.hash,
+        salt: verified.salt,
+        attempts: 0,
+        maxAttempts: MAX_VERIFY_ATTEMPTS,
+        expiresAt: new Date(verified.expiresAt),
+        lastRequestedAt: referenceNow,
+        requestCount1Hour: 1,
+        isUsed: false,
+      };
+      otpChallengeStore.set(phone, challenge);
+    }
+  }
 
   if (!challenge || challenge.isUsed) {
     return {
