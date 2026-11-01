@@ -160,7 +160,7 @@ export async function requestPhoneOtp(
     templateCode: 'CITIZEN_OTP_SMS',
     payload: {
       otp: otpCode,
-      message: `Your GovAsset verification code is ${otpCode}. Valid for 10 minutes. Do not share this with anyone.`,
+      message: `GovAsset login code: ${otpCode} (valid for 10m)`,
     },
   });
 
