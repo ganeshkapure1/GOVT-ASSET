@@ -106,7 +106,7 @@ export async function autoCloseResolvedComplaints(
           return;
         }
 
-        await executeStatusTransitionWithOcc(tx, {
+        await executeStatusTransitionWithOcc(tx as any, {
           complaintId: complaint.id,
           expectedVersion: fresh.version,
           fromStatus: 'VERIFIED_RESOLVED',

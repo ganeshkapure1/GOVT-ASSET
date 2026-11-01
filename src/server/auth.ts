@@ -321,8 +321,8 @@ export function canAccessComplaint(
     return directMatch || assignmentMatch;
   }
 
-  // Triage Officers & Dept Admins are restricted to their Department and Corporation/Jurisdiction
-  if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN') {
+  // Supervisors & Dept Admins are restricted to their Department and Corporation/Jurisdiction
+  if (session.role === 'DEPT_ADMIN' || session.role === 'SUPERVISOR') {
     const matchesDept = Boolean(
       session.departmentId && complaint.departmentId === session.departmentId
     );

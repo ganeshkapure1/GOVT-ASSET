@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
           where: { id: wardParam },
           select: { id: true, level: true },
         });
-        if (selectedJur && (selectedJur.level === 'DISTRICT_CORP' || selectedJur.level === 'CITY' || selectedJur.level === 'STATE')) {
+        if (selectedJur && (selectedJur.level === 'DISTRICT_CORP' || selectedJur.level === 'STATE')) {
           const childWards = await db.jurisdiction.findMany({
             where: {
               OR: [

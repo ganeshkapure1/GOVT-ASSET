@@ -240,7 +240,7 @@ export interface TransitionExecutionInput {
  * 4. Timeline record insertion with fromStatus, toStatus, and actorId.
  */
 export async function executeStatusTransitionWithOcc(
-  tx: Prisma.TransactionClient,
+  tx: Prisma.TransactionClient | any,
   input: TransitionExecutionInput
 ) {
   const {
