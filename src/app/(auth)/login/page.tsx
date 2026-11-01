@@ -17,7 +17,10 @@ import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 type LoginPortal = 'CITIZEN' | 'OFFICIAL' | 'WORKER';
 
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS === 'true' ||
+  process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 // Verified development demo credentials
 const DEV_OFFICIAL_EMAIL = 'officer.csmc@govasset.in';
@@ -51,6 +54,15 @@ function LoginContent() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, key: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    }
+  };
 
   // Tab change handler ensuring correct development credentials remain ready
   const handleTabChange = (portal: LoginPortal) => {
@@ -356,9 +368,18 @@ function LoginContent() {
               className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2.5 shadow-2xs"
             >
               <AlertTriangleIcon className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-              <div className="space-y-0.5">
-                <span className="font-bold block">Authentication Failed</span>
+              <div className="space-y-1 w-full">
+                <span className="font-bold block">Authentication Notice</span>
                 <p className="text-[11px] leading-relaxed">{authError}</p>
+                {authError.includes('SMS OTP service is currently unconfigured') && (
+                  <div className="mt-2 pt-2 border-t border-rose-200 dark:border-rose-900/80 text-[11px] space-y-1 text-slate-700 dark:text-slate-300">
+                    <span className="font-semibold block text-slate-900 dark:text-white">To resolve this in Vercel:</span>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[10px]">
+                      <li>For Live SMS delivery: Configure <code className="font-mono bg-rose-100 dark:bg-rose-900/40 px-1 py-0.5 rounded font-bold">FAST2SMS_API_KEY</code> or <code className="font-mono bg-rose-100 dark:bg-rose-900/40 px-1 py-0.5 rounded font-bold">MSG91_AUTH_KEY</code></li>
+                      <li>For Demonstration / Review: Set <code className="font-mono bg-rose-100 dark:bg-rose-900/40 px-1 py-0.5 rounded font-bold">ENABLE_DEMO_OTP=true</code></li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -371,7 +392,7 @@ function LoginContent() {
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold">{mockNotice}</span>
                     <span className="text-[10px] text-amber-700 dark:text-amber-300 uppercase tracking-wide">
-                      Dev Mock OTP
+                      Sandbox OTP
                     </span>
                   </div>
                   {mockNotice.match(/\d{6}/) && (
@@ -386,6 +407,36 @@ function LoginContent() {
                       Use Code
                     </button>
                   )}
+                </div>
+              )}
+
+              {isDev && (
+                <div className="flex items-center justify-between p-2.5 bg-blue-50/80 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900/70 rounded-xl text-xs">
+                  <div className="flex items-center gap-1.5 text-blue-900 dark:text-blue-300">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                    <span className="font-bold">Demo Citizen Mobile:</span>
+                    <span className="font-mono font-semibold">+919822010108</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('+919822010108', 'citizen_phone')}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    >
+                      {copiedKey === 'citizen_phone' ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobile('+919822010108');
+                        setOtpStep('INPUT_PHONE');
+                        setAuthError(null);
+                      }}
+                      className="text-[11px] font-bold text-[#0B4FC2] dark:text-blue-400 hover:underline"
+                    >
+                      Fill Number
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -507,15 +558,29 @@ function LoginContent() {
                 <div className="flex items-center justify-between p-2.5 bg-blue-50/80 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900/70 rounded-xl text-xs">
                   <div className="flex items-center gap-1.5 text-blue-900 dark:text-blue-300">
                     <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                    <span className="font-bold">Development demo credentials</span>
+                    <div>
+                      <span className="font-bold block">Demo Official:</span>
+                      <span className="font-mono text-[11px] text-blue-700 dark:text-blue-200">
+                        officer.csmc@govasset.in / password123
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRestoreOfficialDemo}
-                    className="text-[11px] font-bold text-[#0B4FC2] dark:text-blue-400 hover:underline"
-                  >
-                    Restore demo credentials
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('officer.csmc@govasset.in', 'official_email')}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-1"
+                    >
+                      {copiedKey === 'official_email' ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRestoreOfficialDemo}
+                      className="text-[11px] font-bold text-[#0B4FC2] dark:text-blue-400 hover:underline"
+                    >
+                      Fill Form
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -570,15 +635,29 @@ function LoginContent() {
                 <div className="flex items-center justify-between p-2.5 bg-emerald-50/80 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900/70 rounded-xl text-xs">
                   <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                    <span className="font-bold">Development demo credentials</span>
+                    <div>
+                      <span className="font-bold block">Demo Worker:</span>
+                      <span className="font-mono text-[11px] text-emerald-800 dark:text-emerald-200">
+                        field.csmc@govasset.in / password123
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRestoreWorkerDemo}
-                    className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
-                  >
-                    Restore demo credentials
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('field.csmc@govasset.in', 'worker_email')}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-1"
+                    >
+                      {copiedKey === 'worker_email' ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRestoreWorkerDemo}
+                      className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                    >
+                      Fill Form
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -630,16 +709,19 @@ function LoginContent() {
             </span>
           </div>
 
-          {/* Explicit Development-Only Mechanism (Hidden from Production) */}
-          {process.env.NODE_ENV !== 'production' && (
-            <details className="pt-4 border-t border-slate-200 dark:border-slate-800 group text-xs text-slate-500">
-              <summary className="cursor-pointer text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 list-none flex items-center justify-center gap-1.5 select-none">
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
-                <span>Developer Sandbox Credentials (Development Only)</span>
+          {/* Explicit Development / Demonstration Sandbox Mechanism */}
+          {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') ? (
+            <details className="pt-4 border-t border-slate-200 dark:border-slate-800 group text-xs text-slate-500" open>
+              <summary className="cursor-pointer text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 list-none flex items-center justify-between select-none">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">Demonstration Credentials (Click role to autofill portal)</span>
+                </div>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">Demo Mode</span>
               </summary>
               <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
                 <p className="text-[10px] text-slate-500 text-center">
-                  Click any role below to autofill valid test credentials in development:
+                  Click any role below to autofill valid test credentials into the active portal:
                 </p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {devAccounts.map((acc) => (
@@ -647,7 +729,7 @@ function LoginContent() {
                       key={acc.label}
                       type="button"
                       onClick={() => handleDevAutofill(acc)}
-                      className="px-2 py-1 text-[10px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-[#0B4FC2] dark:hover:text-blue-300 transition-colors"
+                      className="px-2.5 py-1 text-[10px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-[#0B4FC2] dark:hover:text-blue-300 transition-colors shadow-2xs"
                     >
                       {acc.label}
                     </button>
@@ -655,6 +737,12 @@ function LoginContent() {
                 </div>
               </div>
             </details>
+          ) : (
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                Production mode active • Demo credentials disabled. Set <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[9px]">NEXT_PUBLIC_ENABLE_DEMO_CREDENTIALS=true</code> in Vercel to show evaluation credentials.
+              </p>
+            </div>
           )}
         </div>
       </div>

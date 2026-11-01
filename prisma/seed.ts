@@ -1,6 +1,18 @@
 import { PrismaClient } from '@prisma/client';
+import crypto from 'node:crypto';
 
 const prisma = new PrismaClient();
+
+const SCRYPT_PREFIX = 'scrypt$v1$N=16384,r=8,p=1$';
+function hashPasswordSync(password: string): Promise<string> {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (err, derivedKey) => {
+      if (err) return reject(err);
+      resolve(`${SCRYPT_PREFIX}${salt}$${derivedKey.toString('hex')}`);
+    });
+  });
+}
 
 /**
  * GovAsset Phase 2 Pilot Seed Data
@@ -530,8 +542,8 @@ export async function seedDatabase() {
         staffCode: (u as any).staffCode ?? null,
         designation: (u as any).designation ?? null,
         skills: (u as any).skills ?? null,
-        // Mock hashed password for pilot staff
-        passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$pilot_mock_password_hash_only',
+        // Authentic scrypt password hash for staff demo access in both dev and production
+        passwordHash: await hashPasswordSync('password123'),
       },
     });
   }

@@ -189,12 +189,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Query user by email, staffCode, or username
+    // Query user by email, staffCode, or registered phone number
+    const cleanDigits = identifier.replace(/\D/g, '');
+    const phoneVariants: any[] = [];
+    if (cleanDigits.length === 10) {
+      phoneVariants.push({ phoneNumber: { equals: `+91${cleanDigits}` } });
+      phoneVariants.push({ phoneNumber: { equals: cleanDigits } });
+    }
+
     const user = await db.user.findFirst({
       where: {
         OR: [
           { email: { equals: identifier, mode: 'insensitive' } },
           { staffCode: { equals: identifier, mode: 'insensitive' } },
+          { phoneNumber: { equals: identifier } },
+          ...phoneVariants,
         ],
       },
     });
@@ -323,12 +332,13 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: any) {
+    console.error('Login error detail:', err);
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_AUTH_ERROR',
-          message: 'An error occurred during authentication. Please try again.',
+          message: err?.message || 'An error occurred during authentication. Please try again.',
         },
       },
       { status: 500 }

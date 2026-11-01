@@ -113,18 +113,22 @@ export async function requestPhoneOtp(
     }
   }
 
-  // 3. In production, verify that external SMS provider is configured
+  // 3. In production, verify that external SMS provider or demo OTP mode is configured
   const isProduction = process.env.NODE_ENV === 'production';
   const hasSmsConfig = Boolean(
     process.env.FAST2SMS_API_KEY ||
     process.env.MSG91_AUTH_KEY ||
     (process.env.SMS_API_KEY && process.env.SMS_MOCK !== '1')
   );
+  const isDemoOtpEnabled =
+    (process.env.ENABLE_DEMO_OTP === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') &&
+    process.env.VITEST !== 'true' &&
+    process.env.NODE_ENV !== 'test';
 
-  if (isProduction && !hasSmsConfig) {
+  if (isProduction && !hasSmsConfig && !isDemoOtpEnabled) {
     return {
       success: false,
-      error: 'SMS OTP service is currently unconfigured in production environment.',
+      error: 'SMS OTP service is currently unconfigured in production environment. To enable SMS delivery on Indian mobile numbers, configure FAST2SMS_API_KEY or MSG91_AUTH_KEY in your Vercel project environment variables. For pilot evaluation or demo mode, set ENABLE_DEMO_OTP=true.',
       message: 'Provider unavailable.',
     };
   }
@@ -164,8 +168,8 @@ export async function requestPhoneOtp(
     message: 'If the mobile number is valid, a 6-digit verification code has been dispatched.',
   };
 
-  // Safe developer indicator for local offline environments only (never returned in production)
-  if (!isProduction) {
+  // Safe developer indicator for local offline environments or explicit demo evaluation mode
+  if (!isProduction || isDemoOtpEnabled) {
     response.mockOtpNotice = `[Sandbox Mock OTP: ${otpCode}]`;
   }
 

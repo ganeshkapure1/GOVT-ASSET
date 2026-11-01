@@ -744,7 +744,7 @@ export async function getTrackedComplaint(referenceNumber: string) {
   }
 
   // Format vertical timeline steps for public display
-  const timelineSteps = complaint.timeline.map((entry: any, index: number) => {
+  let timelineSteps = complaint.timeline.map((entry: any, index: number) => {
     let actingParty = 'Municipal System';
     if (entry.actor) {
       actingParty = `${entry.actor.fullName} (${entry.actor.role})`;
@@ -769,6 +769,30 @@ export async function getTrackedComplaint(referenceNumber: string) {
       isCurrent,
     };
   });
+
+  if (timelineSteps.length === 0) {
+    const canonical = lookupComplaint(cleanRef);
+    if (canonical && canonical.timeline && canonical.timeline.length > 0) {
+      timelineSteps = canonical.timeline;
+    } else {
+      timelineSteps = [
+        {
+          title: 'Grievance Submitted',
+          timestamp: complaint.createdAt.toLocaleString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          actingParty: 'Citizen Reporter',
+          publicNote: 'Complaint registered in municipal governance ledger.',
+          isComplete: true,
+          isCurrent: true,
+        },
+      ];
+    }
+  }
 
   const resolvedTimeline = complaint.timeline.find((t: any) => t.toStatus === 'VERIFIED_RESOLVED');
   const resolvedAt = resolvedTimeline?.createdAt ? resolvedTimeline.createdAt.toISOString() : null;

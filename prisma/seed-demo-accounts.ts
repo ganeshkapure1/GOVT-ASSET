@@ -1,9 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { PILOT_DEV_PASSWORD } from '../src/lib/auth-crypto';
+import { hashPassword, PILOT_DEV_PASSWORD } from '../src/lib/auth-crypto';
 
 const prisma = new PrismaClient();
-
-const PILOT_MOCK_HASH = '$argon2id$v=19$m=65536,t=3,p=4$pilot_mock_password_hash_only';
 
 /**
  * Safe, idempotent development-only demo account seeder.
@@ -84,6 +82,8 @@ export async function seedDemoAccounts() {
     },
   ];
 
+  const defaultPasswordHash = await hashPassword(PILOT_DEV_PASSWORD);
+
   for (const acc of demoAccounts) {
     const existing = await prisma.user.findFirst({
       where: {
@@ -105,7 +105,7 @@ export async function seedDemoAccounts() {
           designation: acc.designation,
           skills: acc.skills,
           isActive: true,
-          passwordHash: PILOT_MOCK_HASH,
+          passwordHash: defaultPasswordHash,
           ...(acc.departmentId ? { departmentId: acc.departmentId } : {}),
           ...(acc.jurisdictionId ? { jurisdictionId: acc.jurisdictionId } : {}),
         },
@@ -123,7 +123,7 @@ export async function seedDemoAccounts() {
           designation: acc.designation,
           skills: acc.skills,
           isActive: true,
-          passwordHash: PILOT_MOCK_HASH,
+          passwordHash: defaultPasswordHash,
           departmentId: acc.departmentId,
           jurisdictionId: acc.jurisdictionId,
         },

@@ -228,8 +228,8 @@ export async function canAccessJurisdiction(
 ): Promise<boolean> {
   if (!targetJurisdictionId) return false;
 
-  // Platform admins and Officers oversee all jurisdictions pan-India
-  if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER') {
+  // Platform admins oversee all jurisdictions
+  if (session.role === 'PLATFORM_ADMIN') {
     return true;
   }
 
@@ -299,8 +299,8 @@ export function canAccessComplaint(
   },
   resolvedCorpId?: string | null
 ): boolean {
-  // Platform admins and Officers have platform-wide oversight to triage, assign, and verify complaints
-  if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER') {
+  // Platform admins have platform-wide oversight to triage, assign, and verify complaints
+  if (session.role === 'PLATFORM_ADMIN') {
     return true;
   }
 
@@ -321,8 +321,8 @@ export function canAccessComplaint(
     return directMatch || assignmentMatch;
   }
 
-  // Supervisors & Dept Admins are restricted to their Department and Corporation/Jurisdiction
-  if (session.role === 'DEPT_ADMIN' || session.role === 'SUPERVISOR') {
+  // Triage Officers, Supervisors & Dept Admins are restricted to their Department and Corporation/Jurisdiction
+  if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN' || session.role === 'SUPERVISOR') {
     const matchesDept = Boolean(
       session.departmentId && complaint.departmentId === session.departmentId
     );
