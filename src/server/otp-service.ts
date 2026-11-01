@@ -116,6 +116,7 @@ export async function requestPhoneOtp(
   // 3. In production, verify that external SMS provider or demo OTP mode is configured
   const isProduction = process.env.NODE_ENV === 'production';
   const hasSmsConfig = Boolean(
+    process.env.TEXTBEE_API_KEY ||
     process.env.FAST2SMS_API_KEY ||
     process.env.MSG91_AUTH_KEY ||
     (process.env.SMS_API_KEY && process.env.SMS_MOCK !== '1')
@@ -128,7 +129,7 @@ export async function requestPhoneOtp(
   if (isProduction && !hasSmsConfig && !isDemoOtpEnabled) {
     return {
       success: false,
-      error: 'SMS OTP service is currently unconfigured in production environment. To enable SMS delivery on Indian mobile numbers, configure FAST2SMS_API_KEY or MSG91_AUTH_KEY in your Vercel project environment variables. For pilot evaluation or demo mode, set ENABLE_DEMO_OTP=true.',
+      error: 'SMS OTP service is currently unconfigured in production environment. To enable SMS delivery on Indian mobile numbers, configure TEXTBEE_API_KEY, FAST2SMS_API_KEY, or MSG91_AUTH_KEY in your Vercel project environment variables. For pilot evaluation or demo mode, set ENABLE_DEMO_OTP=true.',
       message: 'Provider unavailable.',
     };
   }

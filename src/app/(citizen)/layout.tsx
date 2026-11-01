@@ -28,22 +28,11 @@ export default function CitizenLayout({
     let isMounted = true;
     fetch('/api/v1/auth/me')
       .then((res) => (res.ok ? res.json() : null))
-      .then(async (data) => {
+      .then((data) => {
         if (!isMounted) return;
-        // The citizen portal strictly recognizes authenticated CITIZEN accounts only.
-        if (data?.success && data?.user && data.user.role === 'CITIZEN') {
+        if (data?.success && data?.user) {
           setSessionUser(data.user);
         } else {
-          // If a staff/officer session was left over in the browser from previous tests,
-          // automatically clear it so fresh visitors to the main citizen portal never see Sachin or any officer pre-signed in!
-          if (data?.user && data.user.role !== 'CITIZEN') {
-            try {
-              if (typeof document !== 'undefined') {
-                document.cookie = 'govasset_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;';
-              }
-              await fetch('/api/v1/auth/logout', { method: 'POST' });
-            } catch {}
-          }
           setSessionUser(null);
         }
       })
@@ -61,6 +50,8 @@ export default function CitizenLayout({
   }, [pathname]);
 
   const isCitizen = Boolean(sessionUser && sessionUser.role === 'CITIZEN');
+  const isFieldWorker = Boolean(sessionUser && sessionUser.role === 'FIELD_WORKER');
+  const isStaff = Boolean(sessionUser && sessionUser.role !== 'CITIZEN');
 
   const handleSignOut = async () => {
     try {
@@ -85,6 +76,9 @@ export default function CitizenLayout({
     { label: 'Report a Problem', href: '/report', icon: PlusIcon },
     ...(isCitizen
       ? [{ label: 'My Grievances', href: '/my-complaints', icon: FileTextIcon }]
+      : []),
+    ...(isFieldWorker
+      ? [{ label: 'Worker Tasks', href: '/ops/field', icon: FileTextIcon }]
       : []),
   ];
 
@@ -144,6 +138,11 @@ export default function CitizenLayout({
                         Citizen Hub
                       </span>
                     )}
+                    {isStaff && sessionUser?.role && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+                        {sessionUser.role.replace('_', ' ')}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     Digital Civic Asset &amp; Grievance Optimization
@@ -192,12 +191,12 @@ export default function CitizenLayout({
               {/* Login / Auth */}
               {isLoadingAuth ? (
                 <div className="w-20 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-              ) : isCitizen ? (
+              ) : sessionUser ? (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80">
                     <UserIcon className="w-3.5 h-3.5 text-[#0B4FC2] dark:text-blue-400" />
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                      {sessionUser?.fullName.split(' ')[0]}
+                      {sessionUser?.fullName?.split(' ')[0] || 'User'}
                     </span>
                   </div>
                   <button

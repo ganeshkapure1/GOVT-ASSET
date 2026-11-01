@@ -120,12 +120,12 @@ export const FSM_TRANSITION_RULES: Record<
 
   WORK_COMPLETED: {
     VERIFIED_RESOLVED: {
-      allowedRoles: ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
-      description: 'Supervisor or Officer physically inspects quality and approves closure.',
+      allowedRoles: ['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      description: 'Supervisor physically inspects quality and approves closure.',
     },
     IN_PROGRESS: {
-      allowedRoles: ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
-      description: 'Supervisor or Officer rejects work and returns ticket for rework.',
+      allowedRoles: ['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      description: 'Supervisor rejects work and returns ticket for rework.',
     },
   },
 

@@ -1411,9 +1411,9 @@ export interface VerifyInput {
 export async function verifyComplaint(input: VerifyInput) {
   const { complaintId, supervisorSession, action, rejectionReason, notes, expectedVersion } = input;
 
-  const allowedRoles = ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'];
+  const allowedRoles = ['SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'];
   if (!allowedRoles.includes(supervisorSession.role)) {
-    throw new WorkflowError('FORBIDDEN', 403, 'Officer, Supervisor or Administrative privileges required.');
+    throw new WorkflowError('FORBIDDEN', 403, 'Supervisor or Administrative privileges required.');
   }
 
   const complaint = await db.complaint.findUnique({

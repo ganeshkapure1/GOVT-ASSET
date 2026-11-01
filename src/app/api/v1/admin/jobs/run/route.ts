@@ -73,3 +73,11 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * GET /api/v1/admin/jobs/run
+ *
+ * Supports Vercel Cron jobs and external GET-based schedulers.
+ */
+export const GET = POST;
+

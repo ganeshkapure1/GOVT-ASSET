@@ -321,8 +321,8 @@ export function canAccessComplaint(
     return directMatch || assignmentMatch;
   }
 
-  // Triage Officers, Supervisors & Dept Admins are restricted to their Department and Corporation/Jurisdiction
-  if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN' || session.role === 'SUPERVISOR') {
+  // Triage Officers & Dept Admins are restricted to their Department and Corporation/Jurisdiction
+  if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN') {
     const matchesDept = Boolean(
       session.departmentId && complaint.departmentId === session.departmentId
     );
@@ -335,10 +335,10 @@ export function canAccessComplaint(
     return matchesDept && matchesJurisdiction;
   }
 
-  // Supervisors are restricted to their Department and authorized Zone/Corporation
+  // Supervisors are restricted to their Department; zone/ward hierarchy is verified via canAccessJurisdiction
   if (session.role === 'SUPERVISOR') {
     const matchesDept = Boolean(
-      session.departmentId && complaint.departmentId === session.departmentId
+      !session.departmentId || !complaint.departmentId || complaint.departmentId === session.departmentId
     );
     return matchesDept;
   }

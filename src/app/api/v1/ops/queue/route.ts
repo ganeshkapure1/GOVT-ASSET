@@ -35,10 +35,12 @@ export async function GET(request: NextRequest) {
       }
 
       if (corporationId) {
-        const corpRecord = await db.jurisdiction.findUnique({
-          where: { id: corporationId },
-          select: { name: true, city: true },
-        });
+        const corpRecord = typeof db.jurisdiction?.findUnique === 'function'
+          ? await db.jurisdiction.findUnique({
+              where: { id: corporationId },
+              select: { name: true, city: true },
+            }).catch(() => null)
+          : null;
 
         const siblingCorps = corpRecord
           ? await db.jurisdiction.findMany({
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
                 ],
               },
               select: { id: true },
-            })
+            }).catch(() => [])
           : [];
 
         const allCorpIds = Array.from(new Set([corporationId, ...siblingCorps.map((c) => c.id)]));
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
         const zones = await db.jurisdiction.findMany({
           where: { parentId: { in: allCorpIds }, level: 'ZONE' },
           select: { id: true },
-        });
+        }).catch(() => []);
         const zoneIds = zones.map((z) => z.id);
 
         // Find all constituent jurisdictions under these zones or directly under corporation
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
             ],
           },
           select: { id: true },
-        });
+        }).catch(() => []);
         corpJurisdictionIds = [
           ...allCorpIds,
           ...zoneIds,
@@ -85,12 +87,14 @@ export async function GET(request: NextRequest) {
     const whereConditions: any = {};
 
     // Jurisdiction filtering
-    if (session.role === 'PLATFORM_ADMIN' || session.role === 'OFFICER' || wardParam === 'all' || !wardParam) {
+    if (session.role === 'PLATFORM_ADMIN') {
       if (wardParam && wardParam !== 'all') {
-        const selectedJur = await db.jurisdiction.findUnique({
-          where: { id: wardParam },
-          select: { id: true, level: true },
-        });
+        const selectedJur = typeof db.jurisdiction?.findUnique === 'function'
+          ? await db.jurisdiction.findUnique({
+              where: { id: wardParam },
+              select: { id: true, level: true },
+            }).catch(() => null)
+          : null;
         if (selectedJur && (selectedJur.level === 'DISTRICT_CORP' || selectedJur.level === 'STATE')) {
           const childWards = await db.jurisdiction.findMany({
             where: {
@@ -100,13 +104,12 @@ export async function GET(request: NextRequest) {
               ],
             },
             select: { id: true },
-          });
+          }).catch(() => []);
           whereConditions.jurisdictionId = { in: childWards.map((c) => c.id) };
         } else {
           whereConditions.jurisdictionId = wardParam;
         }
       }
-      // If wardParam is 'all' or empty, do not restrict whereConditions.jurisdictionId (Pan-India)!
     } else {
       if (wardParam && wardParam !== 'all') {
         // Enforce corporation boundary if specific jurisdiction is requested

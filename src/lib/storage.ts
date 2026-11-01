@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import { STORAGE_BACKEND_NOTICE } from './constants';
 import { UserSession } from './auth-session';
 
@@ -29,7 +30,9 @@ export interface PresignedUrlResult {
   backend: 'S3_R2' | 'LOCAL_MOCK';
 }
 
-const LOCAL_STORAGE_DIR = path.join(process.cwd(), '.storage_mock');
+const LOCAL_STORAGE_DIR = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+  ? path.join(os.tmpdir(), 'govasset_storage_mock')
+  : path.join(process.cwd(), '.storage_mock');
 
 /**
  * Validates file buffer or size and MIME type against strict municipal security bounds.

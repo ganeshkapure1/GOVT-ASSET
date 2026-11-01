@@ -118,10 +118,11 @@ export interface EmailAdapter {
  * Fast2SMS / MSG91 Indian SMS Gateway Adapter
  */
 export class IndianSmsGatewayAdapter implements SmsAdapter {
-  name = 'Fast2SMS / MSG91 Indian SMS Gateway';
+  name = 'TextBee / Fast2SMS / MSG91 Indian SMS Gateway';
 
   isConfigured(): boolean {
     return Boolean(
+      process.env.TEXTBEE_API_KEY ||
       process.env.FAST2SMS_API_KEY ||
       process.env.MSG91_AUTH_KEY ||
       (process.env.SMS_API_KEY && process.env.SMS_MOCK !== '1')
@@ -137,7 +138,7 @@ export class IndianSmsGatewayAdapter implements SmsAdapter {
       return {
         success: false,
         error:
-          'Indian SMS provider credentials unconfigured in server environment. Please configure FAST2SMS_API_KEY or MSG91_AUTH_KEY.',
+          'Indian SMS provider credentials unconfigured in server environment. Please configure TEXTBEE_API_KEY, FAST2SMS_API_KEY, or MSG91_AUTH_KEY.',
       };
     }
 
@@ -150,11 +151,59 @@ export class IndianSmsGatewayAdapter implements SmsAdapter {
     }
 
     // In unit test runner with test mock keys, simulate successful external dispatch
-    if (process.env.NODE_ENV === 'test' || process.env.FAST2SMS_API_KEY === 'test-key' || process.env.VITEST === 'true') {
+    if (process.env.NODE_ENV === 'test' || process.env.FAST2SMS_API_KEY === 'test-key' || process.env.TEXTBEE_API_KEY === 'test-key' || process.env.VITEST === 'true') {
       return {
         success: true,
         externalId: `test_sim_${Date.now()}`,
       };
+    }
+
+    // 1. TextBee Gateway Live HTTP Dispatch (https://api.textbee.dev/api/v1/gateway/send-sms)
+    if (process.env.TEXTBEE_API_KEY) {
+      try {
+        const formattedE164 = `+91${cleanDigits}`;
+        const requestPayload: { recipients: string[]; message: string; deviceId?: string } = {
+          recipients: [formattedE164],
+          message: message,
+        };
+        if (process.env.TEXTBEE_DEVICE_ID) {
+          requestPayload.deviceId = process.env.TEXTBEE_DEVICE_ID;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch('https://api.textbee.dev/api/v1/gateway/send-sms', {
+          method: 'POST',
+          headers: {
+            'x-api-key': process.env.TEXTBEE_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json().catch(() => null);
+
+        if (response.ok && (data?.data?.success === true || data?.success === true || data?.data?.smsBatchId)) {
+          return {
+            success: true,
+            externalId: String(data?.data?.smsBatchId || data?.smsBatchId || `textbee_${Date.now()}`),
+          };
+        } else {
+          const errMsg = data?.message || data?.error || `TextBee rejected SMS dispatch (HTTP ${response.status})`;
+          return {
+            success: false,
+            error: errMsg,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          error: `TextBee HTTP network failure: ${err.message}`,
+        };
+      }
     }
 
     // 1. Fast2SMS Live HTTP Dispatch (https://www.fast2sms.com/dev/bulkV2)

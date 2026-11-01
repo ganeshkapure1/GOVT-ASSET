@@ -559,7 +559,7 @@ function LoginContent() {
                   <div className="flex items-center gap-1.5 text-blue-900 dark:text-blue-300">
                     <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                     <div>
-                      <span className="font-bold block">Demo Official:</span>
+                      <span className="font-bold block">Development Demo Credentials:</span>
                       <span className="font-mono text-[11px] text-blue-700 dark:text-blue-200">
                         officer.csmc@govasset.in / password123
                       </span>
@@ -575,10 +575,11 @@ function LoginContent() {
                     </button>
                     <button
                       type="button"
+                      aria-label="Restore demo credentials"
                       onClick={handleRestoreOfficialDemo}
                       className="text-[11px] font-bold text-[#0B4FC2] dark:text-blue-400 hover:underline"
                     >
-                      Fill Form
+                      Restore Demo Credentials
                     </button>
                   </div>
                 </div>
@@ -636,7 +637,7 @@ function LoginContent() {
                   <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
                     <div>
-                      <span className="font-bold block">Demo Worker:</span>
+                      <span className="font-bold block">Development Demo Credentials:</span>
                       <span className="font-mono text-[11px] text-emerald-800 dark:text-emerald-200">
                         field.csmc@govasset.in / password123
                       </span>
@@ -652,10 +653,11 @@ function LoginContent() {
                     </button>
                     <button
                       type="button"
+                      aria-label="Restore demo credentials"
                       onClick={handleRestoreWorkerDemo}
                       className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
                     >
-                      Fill Form
+                      Restore Demo Credentials
                     </button>
                   </div>
                 </div>

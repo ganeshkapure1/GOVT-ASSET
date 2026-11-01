@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Resolve user's authorized corporation scope
     let corporationId: string | null = null;
-    if (session.role !== 'PLATFORM_ADMIN' && session.role !== 'OFFICER') {
+    if (session.role !== 'PLATFORM_ADMIN') {
       corporationId = await getCorporationIdForJurisdiction(session.jurisdictionId);
     } else if (requestedCorpId && requestedCorpId !== 'all') {
       corporationId = requestedCorpId;

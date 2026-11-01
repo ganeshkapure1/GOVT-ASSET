@@ -5,8 +5,8 @@ import { getEnvConfig } from '@/lib/env';
 /**
  * GET /api/health/ready
  *
- * Readiness Probe for deployment rollout gates and traffic routing.
- * Probes database connectivity and storage adapter availability.
+ * Readiness Probe for deployment rollout gates, traffic routing, and SRE monitoring.
+ * Probes database connectivity and storage adapter availability with fail-safe timeouts.
  * Returns HTTP 200 when ready to accept traffic, or HTTP 503 when dependencies fail.
  *
  * Zero sensitive connection credentials or hostnames disclosed.
@@ -20,12 +20,21 @@ export async function GET() {
   let isDbOk = false;
 
   try {
-    // Probe database with minimal query
-    await db.$queryRawUnsafe('SELECT 1');
+    const timeoutPromise = new Promise<{ ok: boolean; latency: number }>((_, reject) =>
+      setTimeout(() => reject(new Error('Database readiness check timed out')), 3000)
+    );
+
+    const queryPromise = (async () => {
+      const qStart = Date.now();
+      await db.$queryRawUnsafe('SELECT 1');
+      return { ok: true, latency: Date.now() - qStart };
+    })();
+
+    const result = await Promise.race([queryPromise, timeoutPromise]);
     dbStatus = 'CONNECTED';
-    dbLatencyMs = Date.now() - startTime;
+    dbLatencyMs = result.latency;
     isDbOk = true;
-  } catch (err: any) {
+  } catch {
     dbStatus = 'FAILED';
     dbLatencyMs = Date.now() - startTime;
     isDbOk = false;
