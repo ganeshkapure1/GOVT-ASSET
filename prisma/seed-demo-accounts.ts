@@ -21,6 +21,17 @@ export async function seedDemoAccounts() {
     },
   });
 
+  let csmcCorp = await prisma.jurisdiction.findFirst({
+    where: {
+      OR: [
+        { code: 'CSMC-01' },
+        { code: 'CSMC' },
+        { name: { contains: 'Sambhajinagar', mode: 'insensitive' } },
+      ],
+      level: 'DISTRICT_CORP',
+    },
+  });
+
   // 2. Locate or verify PWD Road Maintenance department
   let roadDept = await prisma.department.findFirst({
     where: {
@@ -36,13 +47,13 @@ export async function seedDemoAccounts() {
       id: '66666666-6666-6666-6666-666666660101',
       phone: '+919822010101',
       email: 'officer.csmc@govasset.in',
-      fullName: 'Sachin Waghmare (CSMC Ward 01 Triage Officer)',
+      fullName: 'Sachin Waghmare (CSMC Civic Triage Officer)',
       role: 'OFFICER' as const,
       staffCode: 'CSMC-OFF-01',
-      designation: 'Ward Triage Officer',
+      designation: 'Municipal Civic Triage Officer',
       skills: 'Civic Triage, Work Order Dispatch',
-      departmentId: roadDept?.id || null,
-      jurisdictionId: csmcWard?.id || null,
+      departmentId: null,
+      jurisdictionId: csmcCorp?.id || null,
     },
     {
       id: '66666666-6666-6666-6666-666666660102',

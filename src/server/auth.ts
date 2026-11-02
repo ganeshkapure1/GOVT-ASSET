@@ -208,8 +208,8 @@ export async function canAccessCorporation(
   if (userCorpId === targetCorporationId) return true;
   if (userCorpId) {
     const [c1, c2] = await Promise.all([
-      db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }),
-      db.jurisdiction.findUnique({ where: { id: targetCorporationId }, select: { city: true, name: true } }),
+      db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }).catch(() => null),
+      db.jurisdiction.findUnique({ where: { id: targetCorporationId }, select: { city: true, name: true } }).catch(() => null),
     ]);
     if (c1 && c2 && ((c1.city && c2.city && c1.city.toLowerCase() === c2.city.toLowerCase()) || c1.name.toLowerCase() === c2.name.toLowerCase())) {
       return true;
@@ -261,8 +261,8 @@ export async function canAccessJurisdiction(
       const targetCorpId = await getCorporationIdForJurisdiction(targetJurisdictionId);
       if (userCorpId && targetCorpId && userCorpId !== targetCorpId) {
         const [c1, c2] = await Promise.all([
-          db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }),
-          db.jurisdiction.findUnique({ where: { id: targetCorpId }, select: { city: true, name: true } }),
+          db.jurisdiction.findUnique({ where: { id: userCorpId }, select: { city: true, name: true } }).catch(() => null),
+          db.jurisdiction.findUnique({ where: { id: targetCorpId }, select: { city: true, name: true } }).catch(() => null),
         ]);
         if (c1 && c2 && ((c1.city && c2.city && c1.city.toLowerCase() === c2.city.toLowerCase()) || c1.name.toLowerCase() === c2.name.toLowerCase())) {
           return true;
@@ -297,7 +297,8 @@ export function canAccessComplaint(
     assignments?: Array<{ assignedWorkerId?: string | null; assignedWorker?: { id?: string | null }; isActive?: boolean }>;
     corporationId?: string | null;
   },
-  resolvedCorpId?: string | null
+  resolvedCorpId?: string | null,
+  userCorpId?: string | null
 ): boolean {
   // Platform admins have platform-wide oversight to triage, assign, and verify complaints
   if (session.role === 'PLATFORM_ADMIN') {
@@ -324,13 +325,21 @@ export function canAccessComplaint(
   // Triage Officers & Dept Admins are restricted to their Department and Corporation/Jurisdiction
   if (session.role === 'OFFICER' || session.role === 'DEPT_ADMIN') {
     const matchesDept = Boolean(
-      session.departmentId && complaint.departmentId === session.departmentId
+      !session.departmentId ||
+      !complaint.departmentId ||
+      session.departmentId === complaint.departmentId
     );
     const matchesJurisdiction = Boolean(
       !session.jurisdictionId ||
       !complaint.jurisdictionId ||
       session.jurisdictionId === complaint.jurisdictionId ||
-      (resolvedCorpId && (session.jurisdictionId === resolvedCorpId || complaint.jurisdictionId === resolvedCorpId || complaint.corporationId === resolvedCorpId))
+      (userCorpId && resolvedCorpId && userCorpId === resolvedCorpId) ||
+      (resolvedCorpId && (
+        session.jurisdictionId === resolvedCorpId ||
+        complaint.jurisdictionId === resolvedCorpId ||
+        complaint.corporationId === resolvedCorpId ||
+        (userCorpId && userCorpId === resolvedCorpId)
+      ))
     );
     return matchesDept && matchesJurisdiction;
   }

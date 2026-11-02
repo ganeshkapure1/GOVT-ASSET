@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { UserSession } from '@/lib/auth-session';
-import { canAccessComplaint } from './auth';
+import { canAccessComplaint, getCorporationIdForJurisdiction } from './auth';
 import { executeStatusTransitionWithOcc, ComplaintStatus } from './fsm';
 import { WorkflowError } from './complaint-service';
 import { SYNTHETIC_BOUNDARY_DISCLAIMER } from '@/lib/constants';
@@ -264,7 +264,11 @@ export async function linkDuplicateComplaint(input: LinkDuplicateInput) {
 
   // Authorization check
   if (!canAccessComplaint(officerSession, child)) {
-    throw new WorkflowError('FORBIDDEN', 403, 'You do not have jurisdiction authority over this complaint.');
+    const childCorpId = await getCorporationIdForJurisdiction(child.jurisdictionId);
+    const userCorpId = await getCorporationIdForJurisdiction(officerSession.jurisdictionId);
+    if (!canAccessComplaint(officerSession, child, childCorpId, userCorpId)) {
+      throw new WorkflowError('FORBIDDEN', 403, 'You do not have jurisdiction authority over this complaint.');
+    }
   }
 
   // Retrieve master parent complaint

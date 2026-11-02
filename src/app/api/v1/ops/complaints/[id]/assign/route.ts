@@ -24,7 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const session = await requireAuth(['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
+    const session = await requireAuth(
+      ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      { checkFreshness: true }
+    );
     const body = await request.json();
 
     const workerId = body.assignedWorkerId || body.assignedToId;

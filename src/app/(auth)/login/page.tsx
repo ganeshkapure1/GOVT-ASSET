@@ -321,12 +321,12 @@ function LoginContent() {
   const officialDemoAccounts = [
     {
       id: 'off_csmc',
-      label: 'CSMC Ward Triage Officer',
+      label: 'CSMC Operations Officer',
       name: 'Sachin Waghmare',
       email: 'officer.csmc@govasset.in',
       password: 'password123',
-      roleBadge: 'Ward Triage Officer',
-      jurisdiction: 'CSMC Ward 01 (Shahaganj)',
+      roleBadge: 'Triage Officer',
+      jurisdiction: 'Chhatrapati Sambhajinagar Municipal Corporation (CSMC)',
       description: 'Evaluates civic tickets, assigns priority levels, and dispatches field maintenance crews.',
     },
     {

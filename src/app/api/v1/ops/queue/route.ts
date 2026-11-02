@@ -12,12 +12,10 @@ import { maskPhoneNumber } from '@/lib/pii';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth([
-      'OFFICER',
-      'SUPERVISOR',
-      'DEPT_ADMIN',
-      'PLATFORM_ADMIN',
-    ]);
+    const session = await requireAuth(
+      ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      { checkFreshness: true }
+    );
 
     const { searchParams } = new URL(request.url);
     const wardParam = searchParams.get('wardId');

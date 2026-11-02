@@ -888,7 +888,8 @@ export async function triageComplaint(input: TriageInput) {
   // Authorization & Jurisdiction boundary check
   if (!canAccessComplaint(officerSession, complaint)) {
     const complaintCorpId = await getCorporationIdForJurisdiction(complaint.jurisdictionId);
-    if (!canAccessComplaint(officerSession, complaint, complaintCorpId)) {
+    const userCorpId = await getCorporationIdForJurisdiction(officerSession.jurisdictionId);
+    if (!canAccessComplaint(officerSession, complaint, complaintCorpId, userCorpId)) {
       throw new WorkflowError('FORBIDDEN', 403, 'You do not have jurisdiction authority over this complaint.');
     }
   }
@@ -1028,7 +1029,8 @@ export async function assignComplaint(input: AssignInput) {
 
   if (!canAccessComplaint(officerSession, complaint)) {
     const complaintCorpId = await getCorporationIdForJurisdiction(complaint.jurisdictionId);
-    if (!canAccessComplaint(officerSession, complaint, complaintCorpId)) {
+    const userCorpId = await getCorporationIdForJurisdiction(officerSession.jurisdictionId);
+    if (!canAccessComplaint(officerSession, complaint, complaintCorpId, userCorpId)) {
       throw new WorkflowError('FORBIDDEN', 403, 'You do not have jurisdiction authority to assign this complaint.');
     }
   }

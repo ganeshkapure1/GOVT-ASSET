@@ -21,13 +21,10 @@ interface RouteContext {
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await requireAuth([
-      'OFFICER',
-      'SUPERVISOR',
-      'FIELD_WORKER',
-      'DEPT_ADMIN',
-      'PLATFORM_ADMIN',
-    ]);
+    const session = await requireAuth(
+      ['OFFICER', 'SUPERVISOR', 'FIELD_WORKER', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      { checkFreshness: true }
+    );
 
     const complaint = await db.complaint.findUnique({
       where: { id: params.id },
@@ -66,8 +63,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       (a) => a.assignedWorkerId === session.userId && a.isActive
     );
 
+    const complaintCorpId = await getCorporationIdForJurisdiction(complaint.jurisdictionId);
+    const userCorpId = await getCorporationIdForJurisdiction(session.jurisdictionId);
+
     const hasAccess =
-      canAccessComplaint(session, complaint) ||
+      canAccessComplaint(session, complaint, complaintCorpId, userCorpId) ||
       (session.role === 'FIELD_WORKER' && isAssignedWorker);
 
     if (!hasAccess) {
