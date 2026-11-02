@@ -25,6 +25,7 @@ export default function OpsVerificationsPage() {
   const [selectedTask, setSelectedTask] = useState<VerificationItem | null>(null);
   const [reworkModalOpen, setReworkModalOpen] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const [verifications, setVerifications] = useState<VerificationItem[]>([]);
@@ -69,12 +70,20 @@ export default function OpsVerificationsPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setSelectedTask(null);
+        setIsError(false);
         setFeedbackNotice(`Work Order ${item.ref} approved! Status transitioned to VERIFIED_RESOLVED. Citizen notified with 7-day dispute window.`);
         loadVerifications();
       } else {
-        setFeedbackNotice(`Approval failed: ${json?.error?.message || 'Unauthorized'}`);
+        const errorMsg = json?.error?.message || 'Unauthorized';
+        setIsError(true);
+        if (errorMsg.includes('Supervisor or Administrative privileges required')) {
+          setFeedbackNotice(`Quality resolution approval requires Supervisor authority. Please sign in as Field Supervisor (supervisor.csmc@govasset.in) or Platform Admin (admin@govasset.in) to certify resolution.`);
+        } else {
+          setFeedbackNotice(`Approval failed: ${errorMsg}`);
+        }
       }
     } catch {
+      setIsError(true);
       setFeedbackNotice('Network error while recording verification approval.');
     } finally {
       setIsLoading(false);
@@ -96,13 +105,21 @@ export default function OpsVerificationsPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setReworkModalOpen(false);
+        setIsError(false);
         setFeedbackNotice(`Work Order ${selectedTask.ref} returned for rework. Reverted to IN_PROGRESS with corrective instructions.`);
         setSelectedTask(null);
         loadVerifications();
       } else {
-        setFeedbackNotice(`Rework dispatch failed: ${json?.error?.message || 'Unauthorized'}`);
+        const errorMsg = json?.error?.message || 'Unauthorized';
+        setIsError(true);
+        if (errorMsg.includes('Supervisor or Administrative privileges required')) {
+          setFeedbackNotice(`Returning work orders for rework requires Supervisor authority. Please sign in as Field Supervisor (supervisor.csmc@govasset.in) or Platform Admin.`);
+        } else {
+          setFeedbackNotice(`Rework dispatch failed: ${errorMsg}`);
+        }
       }
     } catch {
+      setIsError(true);
       setFeedbackNotice('Network error while returning work order for rework.');
     } finally {
       setIsLoading(false);
@@ -113,15 +130,29 @@ export default function OpsVerificationsPage() {
     <div className="space-y-6">
       {/* Feedback Banner */}
       {feedbackNotice && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 rounded-2xl text-xs font-semibold text-emerald-900 dark:text-emerald-300 flex items-center justify-between shadow-subtle">
+        <div
+          className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-subtle ${
+            isError
+              ? 'bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+              : 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <CheckCircleIcon className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            {isError ? (
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+            ) : (
+              <CheckCircleIcon className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            )}
             <span>{feedbackNotice}</span>
           </div>
           <button
             type="button"
             onClick={() => setFeedbackNotice(null)}
-            className="text-emerald-800 dark:text-emerald-300 font-bold ml-2 underline hover:text-emerald-950 dark:hover:text-white"
+            className={`font-bold ml-2 underline ${
+              isError
+                ? 'text-rose-800 dark:text-rose-300 hover:text-rose-950 dark:hover:text-white'
+                : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white'
+            }`}
           >
             Dismiss
           </button>

@@ -331,12 +331,12 @@ function LoginContent() {
     },
     {
       id: 'sup_csmc',
-      label: 'Civil Works Supervisor',
+      label: 'CSMC Quality Supervisor',
       name: 'Pooja Gaikwad',
       email: 'supervisor.csmc@govasset.in',
       password: 'password123',
-      roleBadge: 'Civil Supervisor',
-      jurisdiction: 'CSMC Zone 01 Roads & Infrastructure',
+      roleBadge: 'Supervisor',
+      jurisdiction: 'Chhatrapati Sambhajinagar Municipal Corporation (CSMC)',
       description: 'Performs quality inspections, reviews work completion proofs, and certifies resolution.',
     },
     {

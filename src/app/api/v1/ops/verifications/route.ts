@@ -10,7 +10,10 @@ import { maskPhoneNumber } from '@/lib/pii';
  */
 export async function GET() {
   try {
-    const session = await requireAuth(['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN']);
+    const session = await requireAuth(
+      ['OFFICER', 'SUPERVISOR', 'DEPT_ADMIN', 'PLATFORM_ADMIN'],
+      { checkFreshness: true }
+    );
 
     const whereConditions: any = {
       status: 'WORK_COMPLETED',

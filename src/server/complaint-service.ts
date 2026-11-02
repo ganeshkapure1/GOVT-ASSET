@@ -1430,11 +1430,13 @@ export async function verifyComplaint(input: VerifyInput) {
   }
 
   // Check jurisdiction & department authority
-  if (!canAccessComplaint(supervisorSession, complaint)) {
+  const complaintCorpId = await getCorporationIdForJurisdiction(complaint.jurisdictionId);
+  const userCorpId = await getCorporationIdForJurisdiction(supervisorSession.jurisdictionId);
+  if (!canAccessComplaint(supervisorSession, complaint, complaintCorpId, userCorpId)) {
     throw new WorkflowError('FORBIDDEN', 403, 'You do not have supervisory authority over this complaint.');
   }
 
-  const hasJurisdiction = await canAccessJurisdiction(
+  const hasJurisdiction = !complaint.jurisdictionId || await canAccessJurisdiction(
     supervisorSession,
     complaint.jurisdictionId
   );
